@@ -90,12 +90,4 @@
 
 前端使用 Vue 3、TypeScript、Vite 和 TDesign；后端使用 Java 21、Spring Boot 和 Maven。前端部署构建脚本为 `npm run build:deploy`，发布资源路径为 `/web/`，接口路径前缀为 `/smart-storage-admin`。实际运行还需要配置数据库、缓存、对象存储和权限等环境参数。
 
-## 快照来源与安全说明
-
-| 部分 | 公司 `feature/ys` 来源提交 |
-| --- | --- |
-| `manage/` 前端 | `d224bbce006f4c05ca56f37559a90d6b7eaa4403` |
-| `service/` 后端 | `2f8fabbe014e57179f4abf3fac4f63acbca07702` |
-
-上传前仅在本副本中替换了明文密码、访问密钥、私钥、测试密文和内部 IP；公司仓库未改动。部署前必须通过安全的环境配置补齐所需值，不能直接把此快照连接到原环境。
 
