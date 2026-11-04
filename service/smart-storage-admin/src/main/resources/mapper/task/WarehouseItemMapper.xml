@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.task.WarehouseItemMapper">
+
+    <select id="listWarehouseItemByConditionOnPage" resultType="com.chinaunicom.smartstorage.admin.dto.task.warehouseItem.WarehouseItemQueryRespDTO">
+    	select a.id,a.warehouse_no,a.deduct_weight,a.add_time,a.state,
+			b.license_plate,b.job_no,b.job_type,b.card_no,
+			d.warehouse_id,d.grain_grade,
+			e.grain_variety,
+			f.gross_weight,f.tare_weight
+    	from task_flow_warehouse_item a
+			left join task_flow b on (a.task_id=b.id)
+			left join task_flow_quality_item d on (d.task_id=b.id)
+			left join task_flow_sample_item e on (e.task_id=b.id)
+			left join (
+				select task_id,sum(gross_weight) as gross_weight,sum(tare_weight) as tare_weight,
+				sum(gross_weight)-sum(tare_weight) as net_weight
+				from
+				(
+					select task_id,case weight_type when 1 then weight end as gross_weight,
+					case weight_type when 2 then weight end as tare_weight
+					from task_flow_weight_item
+				) tb group by task_id
+			) f on (f.task_id=b.id)
+		<where>
+			<if test="userId != null and userId != ''">
+				and a.add_user=#{userId}
+			</if>
+			<if test="startTime != null and startTime != ''">
+				and (to_char(a.add_time, 'YYYY-MM-DD') <![CDATA[>=]]> #{startTime})
+			</if>
+			<if test="endTime != null and endTime != ''">
+				and (to_char(a.add_time, 'YYYY-MM-DD') <![CDATA[<=]]> #{endTime})
+			</if>
+		</where>
+		order by a.add_time desc
+    </select>
+
+	<select id="getTaskWarehouse" resultType="com.chinaunicom.smartstorage.admin.dto.task.warehouseItem.TaskWarehouseRespDTO">
+		select a.job_no,
+			b.warehouse_id,b.grain_grade,b.deduction,b.deduction_price,
+			c.gross_weight,c.tare_weight,
+			d.grain_variety
+		from task_flow a
+			left join task_flow_quality_item b on (a.id=b.task_id)
+			left join (
+				select task_id,sum(gross_weight) as gross_weight,sum(tare_weight) as tare_weight,
+				sum(gross_weight)-sum(tare_weight) as net_weight
+				from
+				(
+					select task_id,case weight_type when 1 then weight end as gross_weight,
+					case weight_type when 2 then weight end as tare_weight
+					from task_flow_weight_item where task_id=#{taskId}
+				) tb group by task_id
+			) c on (a.id=c.task_id)
+			left join task_flow_sample_item d on (a.id=d.task_id)
+		where a.id=#{taskId}
+	</select>
+
+	<select id="getWarehouseItemByTaskId" resultType="com.chinaunicom.smartstorage.admin.dto.task.warehouseItem.WarehouseItemRespDTO">
+		select a.*,
+			b.name as add_user_name
+		from task_flow_warehouse_item a
+		left join base_user_info b on (a.add_user=b.id)
+		where a.task_id=#{taskId} and a.state=1
+	</select>
+
+	<select id="getTaskWarehouseOut" resultType="com.chinaunicom.smartstorage.admin.dto.task.warehouseItem.WarehouseOutRespDTO">
+		select a.id,
+		       b.weight,
+		       d.warehouse_name as warehouseName,
+		       (select name from base_user_info where id =  d.keeper) as keeper,
+		       d.grain_variety as grainVariety,
+		       d.grain_grade as grainGrade
+		from task_flow a
+		left join task_flow_weight_item b on a.id = b.task_id
+		left join warehouse_out_order c on c.id = a.order_id
+		left join sts_warehouse d on d.id = c.warehouse_id
+		<where>
+			b.weight_type = 2
+			<if test="taskId != null and taskId != ''">
+				and a.id = #{taskId}
+			</if>
+		</where>
+	</select>
+</mapper>

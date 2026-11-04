@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  人员行为算法任务 Mapper（ai_person_algorithm_task）
+
+  ==================== 数据范围下推规则 ====================
+  本文件的仓库范围条件共出现 2 处：selectByTaskNo、selectByEventId。
+  形态与 PersonBehaviorMapper.xml 的五处完全一致：
+    非全域 且有授权仓库 -> AND t.warehouse_id IN (...)
+    非全域 且无授权仓库 -> AND 1 = 0 （失败即拒绝）
+    全域               -> 不追加仓库条件
+  insert / update 不做范围下推：调用前 Service 已按事件数据范围校验过，
+  且插入行本身携带 warehouse_id，后续读取仍会再次受范围约束。
+
+  实体列名与库列名蛇形/驼峰由 mapUnderscoreToCamelCase 自动映射，
+  detected_count 是查询期由 detections JSON 派生的别名，不是表列。
+-->
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aivision.personBehavior.PersonAlgorithmTaskMapper">
+
+    <sql id="TaskColumns">
+        t.id, t.task_no, t.event_id, t.point_id, t.camera_id, t.camera_code,
+        t.warehouse_id, t.region_id, t.org_id,
+        t.task_type, t.media_type, t.media_refs, t.normal_reference_ref, t.roi,
+        t.execution_status, t.conclusion, t.behavior_type, t.confidence,
+        t.model_name, t.model_version, t.algorithm_version, t.config_version,
+        t.confidence_threshold, t.media_digest,
+        t.started_at, t.finished_at, t.inference_duration_ms,
+        t.detections, t.evidence_refs, t.raw_result_ref,
+        t.error_code, t.error_message, t.retry_count, t.trace_id,
+        t.is_simulated, t.created_by, t.created_at, t.updated_by, t.updated_at,
+        <!-- 检出目标数：不是表列，查询期派生；非 JSON 数组的脏数据按 0 处理 -->
+        CASE
+            WHEN t.detections IS NULL OR t.detections = '' THEN 0
+            WHEN t.detections ~ '^\s*\[' THEN jsonb_array_length(t.detections::jsonb)
+            ELSE 0
+        END AS detected_count
+    </sql>
+
+    <sql id="ScopeFilter">
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND t.warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <!-- ========== 受理落行（39 列全列出） ========== -->
+    <insert id="insertTask" parameterType="com.chinaunicom.smartstorage.admin.entity.personBehavior.AiPersonAlgorithmTask">
+        INSERT INTO ai_person_algorithm_task (
+            id, task_no, event_id, point_id, camera_id, camera_code,
+            warehouse_id, region_id, org_id,
+            task_type, media_type, media_refs, normal_reference_ref, roi,
+            execution_status, conclusion, behavior_type, confidence,
+            model_name, model_version, algorithm_version, config_version,
+            confidence_threshold, media_digest,
+            started_at, finished_at, inference_duration_ms,
+            detections, evidence_refs, raw_result_ref,
+            error_code, error_message, retry_count, trace_id,
+            is_simulated, created_by, created_at, updated_by, updated_at
+        ) VALUES (
+            #{id}, #{taskNo}, #{eventId,jdbcType=BIGINT}, #{pointId},
+            #{cameraId,jdbcType=VARCHAR}, #{cameraCode,jdbcType=VARCHAR},
+            #{warehouseId}, #{regionId,jdbcType=VARCHAR}, #{orgId,jdbcType=BIGINT},
+            #{taskType}, #{mediaType,jdbcType=VARCHAR},
+            #{mediaRefs,jdbcType=VARCHAR}, #{normalReferenceRef,jdbcType=VARCHAR},
+            #{roi,jdbcType=VARCHAR},
+            #{executionStatus}, #{conclusion,jdbcType=VARCHAR},
+            #{behaviorType,jdbcType=VARCHAR}, #{confidence,jdbcType=DECIMAL},
+            #{modelName,jdbcType=VARCHAR}, #{modelVersion,jdbcType=VARCHAR},
+            #{algorithmVersion,jdbcType=VARCHAR}, #{configVersion,jdbcType=VARCHAR},
+            #{confidenceThreshold,jdbcType=DECIMAL}, #{mediaDigest,jdbcType=VARCHAR},
+            #{startedAt,jdbcType=TIMESTAMP}, #{finishedAt,jdbcType=TIMESTAMP},
+            #{inferenceDurationMs,jdbcType=BIGINT},
+            #{detections,jdbcType=VARCHAR}, #{evidenceRefs,jdbcType=VARCHAR},
+            #{rawResultRef,jdbcType=VARCHAR},
+            #{errorCode,jdbcType=VARCHAR}, #{errorMessage,jdbcType=VARCHAR},
+            #{retryCount}, #{traceId,jdbcType=VARCHAR},
+            #{isSimulated}, #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP},
+            #{updatedBy,jdbcType=VARCHAR}, #{updatedAt,jdbcType=TIMESTAMP}
+        )
+    </insert>
+
+    <!-- ========== 轮询取到最新输出后更新结果字段 ========== -->
+    <update id="updateTaskResult" parameterType="com.chinaunicom.smartstorage.admin.entity.personBehavior.AiPersonAlgorithmTask">
+        UPDATE ai_person_algorithm_task
+        SET execution_status      = #{executionStatus},
+            conclusion            = #{conclusion,jdbcType=VARCHAR},
+            behavior_type         = #{behaviorType,jdbcType=VARCHAR},
+            confidence            = #{confidence,jdbcType=DECIMAL},
+            model_name            = #{modelName,jdbcType=VARCHAR},
+            model_version         = #{modelVersion,jdbcType=VARCHAR},
+            algorithm_version     = #{algorithmVersion,jdbcType=VARCHAR},
+            config_version        = #{configVersion,jdbcType=VARCHAR},
+            started_at            = #{startedAt,jdbcType=TIMESTAMP},
+            finished_at           = #{finishedAt,jdbcType=TIMESTAMP},
+            inference_duration_ms = #{inferenceDurationMs,jdbcType=BIGINT},
+            detections            = #{detections,jdbcType=VARCHAR},
+            evidence_refs         = #{evidenceRefs,jdbcType=VARCHAR},
+            raw_result_ref        = #{rawResultRef,jdbcType=VARCHAR},
+            error_code            = #{errorCode,jdbcType=VARCHAR},
+            error_message         = #{errorMessage,jdbcType=VARCHAR},
+            is_simulated          = #{isSimulated},
+            updated_by            = #{updatedBy,jdbcType=VARCHAR},
+            updated_at            = #{updatedAt,jdbcType=TIMESTAMP}
+        WHERE task_no = #{taskNo}
+    </update>
+
+    <!-- ========== 按任务号查询（带数据范围，1/2） ========== -->
+    <select id="selectByTaskNo"
+            resultType="com.chinaunicom.smartstorage.admin.entity.personBehavior.AiPersonAlgorithmTask">
+        SELECT <include refid="TaskColumns"/>
+        FROM ai_person_algorithm_task t
+        WHERE t.task_no = #{taskNo}
+        <include refid="ScopeFilter"/>
+    </select>
+
+    <!-- ========== 按事件查询任务列表（带数据范围，2/2） ==========
+      QUEUED 行没有 started_at，排序退到 created_at，保证刚提交的任务排最前。 -->
+    <select id="selectByEventId"
+            resultType="com.chinaunicom.smartstorage.admin.entity.personBehavior.AiPersonAlgorithmTask">
+        SELECT <include refid="TaskColumns"/>
+        FROM ai_person_algorithm_task t
+        WHERE t.event_id = #{eventId}
+        <include refid="ScopeFilter"/>
+        ORDER BY COALESCE(t.started_at, t.created_at) DESC, t.id DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

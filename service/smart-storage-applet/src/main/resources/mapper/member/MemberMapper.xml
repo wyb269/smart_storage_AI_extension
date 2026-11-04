@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.applet.mapper.member.MemberMapper">
+    <resultMap id="MemberMap" type="com.chinaunicom.smartstorage.applet.entity.member.Member">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="wechat_mini_openid" property="wechatMiniOpenid"/>
+        <result column="password" property="password"/>
+        <result column="nickname" property="nickname"/>
+        <result column="phone" property="phone"/>
+        <result column="show_state" property="showState"/>
+        <result column="add_time" property="addTime"/>
+        <result column="icon" property="icon"/>
+        <result column="source_type" property="sourceType"/>
+        <result column="last_login_time" property="lastLoginTime"/>
+    </resultMap>
+    <sql id="base_sql">
+        zm.id,
+        zm.username,
+        zm.password,
+        zm.nickname,
+        zm.phone,
+        zm.show_state,
+        zm.add_time,
+        zm.icon,
+        zm.source_type,
+        zm.wechat_mini_openid,
+        zm.last_login_time
+    </sql>
+    <select id="displayMemberByWechatMiniOpenid" resultMap="MemberMap">
+        select
+        <include refid="base_sql">
+        </include>
+        from ss_member zm
+        where wechat_mini_openid = #{wechatMiniOpenid}
+    </select>
+
+    <select id="displayMemberById" resultMap="MemberMap">
+        select
+        <include refid="base_sql">
+        </include>
+        from ss_member zm
+        where zm.id = #{id}
+    </select>
+</mapper>

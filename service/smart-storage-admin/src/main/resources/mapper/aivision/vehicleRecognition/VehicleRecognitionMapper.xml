@@ -1,0 +1,696 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  车辆智能识别 Mapper
+
+  ==================== 数据范围下推规则（唯一权威定义） ====================
+  本文件的仓库范围条件共出现 <b>11 处</b>：
+    listTodayVehicle、listPoints、listRecentEvent、
+    EventFilters（listEventByCondition 与 listEventForExport 共用）、
+    getEventSummaryInScope、getEventDetailInScope、
+    selectAlgorithmTaskContext、selectAlgorithmTaskByTaskNo、
+    selectAlgorithmTasksByEvent、updateAlgorithmTask、writeBackEventAlgorithm
+    （其中 insertAlgorithmTask 不带范围条件：它的归属列全部来自
+     selectAlgorithmTaskContext 这条已校验范围的读取，前端拼不进别人的仓库）
+
+  各处形态必须完全一致：
+    非全域 且有授权仓库  -> AND <别名>.warehouse_id IN (...)
+    非全域 且无授权仓库  -> AND 1 = 0        （失败即拒绝，返回空集）
+    全域               -> 不追加仓库条件
+
+  修改任一处时必须同步其余各处：把「取不到授权维度」当成「不限制」
+  等价于放弃越权防护。范围参数只能由 Service 从登录态构造，
+  查询 DTO 中的 scope 字段标 @JsonIgnore。
+
+  ⚠️ 新增查询时务必补上这一段，并同步更新上面的计数。
+  ========================================================================
+-->
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aivision.vehicleRecognition.VehicleRecognitionMapper">
+
+    <!-- ========== 列表结果映射 ========== -->
+    <resultMap id="EventResultMap" type="com.chinaunicom.smartstorage.admin.dto.vehicleRecognition.VehicleEventRespDTO">
+        <id     property="eventId"          column="event_id"/>
+        <result property="eventNo"          column="event_no"/>
+        <result property="plateNo"          column="plate_no"/>
+        <result property="vehicleType"      column="vehicle_type"/>
+        <result property="vehicleColor"     column="vehicle_color"/>
+        <result property="direction"        column="direction"/>
+        <result property="directionName"    column="direction_name"/>
+        <result property="pointId"          column="point_id"/>
+        <result property="gateName"         column="gate_name"/>
+        <result property="recognizedAt"     column="recognized_at"/>
+        <result property="warehouseId"      column="warehouse_id"/>
+        <result property="warehouseName"    column="warehouse_name"/>
+        <result property="cameraCode"       column="camera_code"/>
+        <result property="algorithmStatus"  column="algorithm_status"/>
+        <result property="confidence"       column="confidence"/>
+        <result property="verifyStatus"     column="verify_status"/>
+        <result property="processedBy"      column="processed_by"/>
+        <result property="processedAt"      column="processed_at"/>
+        <result property="verifyOpinion"    column="verify_opinion"/>
+        <result property="eventVersion"     column="event_version"/>
+    </resultMap>
+
+    <!-- 详情结果映射：在列表字段之上补描述与模拟数据标识 -->
+    <resultMap id="EventDetailResultMap"
+               type="com.chinaunicom.smartstorage.admin.dto.vehicleRecognition.VehicleEventDetailRespDTO"
+               extends="EventResultMap">
+        <result property="eventDesc"    column="event_desc"/>
+        <result property="isSimulated"  column="is_simulated"/>
+    </resultMap>
+
+    <!-- 今日识别车辆结果映射（左侧卡片，字段更精简） -->
+    <resultMap id="TodayVehicleResultMap" type="com.chinaunicom.smartstorage.admin.dto.vehicleRecognition.TodayVehicleRespDTO">
+        <id     property="eventId"        column="event_id"/>
+        <result property="plateNo"        column="plate_no"/>
+        <result property="vehicleType"    column="vehicle_type"/>
+        <result property="vehicleColor"   column="vehicle_color"/>
+        <result property="direction"      column="direction"/>
+        <result property="directionName"  column="direction_name"/>
+        <result property="pointId"        column="point_id"/>
+        <result property="gateName"       column="gate_name"/>
+        <result property="recognizedAt"   column="recognized_at"/>
+        <result property="verifyStatus"   column="verify_status"/>
+    </resultMap>
+
+    <!--
+      ========== 算法任务实体映射 ==========
+      时间列保持 TIMESTAMP → LocalDateTime 原样映射，<b>不在这条链路上 to_char</b>：
+      同一份实体既要落库（LocalDateTime）也要出响应（字符串），
+      格式化统一在 VehicleAlgorithmTaskConverter 里做一次，避免两种模式格式漂移。
+    -->
+    <resultMap id="AlgorithmTaskResultMap"
+               type="com.chinaunicom.smartstorage.admin.entity.vehicleRecognition.VehicleRecognitionAlgorithmTask">
+        <id     property="id"                   column="id"/>
+        <result property="taskNo"               column="task_no"/>
+        <result property="eventId"              column="event_id"/>
+        <result property="pointId"              column="point_id"/>
+        <result property="cameraId"             column="camera_id"/>
+        <result property="cameraCode"           column="camera_code"/>
+        <result property="warehouseId"          column="warehouse_id"/>
+        <result property="regionId"             column="region_id"/>
+        <result property="orgId"                column="org_id"/>
+        <result property="taskType"             column="task_type"/>
+        <result property="mediaType"            column="media_type"/>
+        <result property="mediaRefs"            column="media_refs"/>
+        <result property="normalReferenceRef"   column="normal_reference_ref"/>
+        <result property="roi"                  column="roi"/>
+        <result property="executionStatus"      column="execution_status"/>
+        <result property="conclusion"           column="conclusion"/>
+        <result property="vehicleType"          column="vehicle_type"/>
+        <result property="confidence"           column="confidence"/>
+        <result property="modelName"            column="model_name"/>
+        <result property="modelVersion"         column="model_version"/>
+        <result property="algorithmVersion"     column="algorithm_version"/>
+        <result property="configVersion"        column="config_version"/>
+        <result property="confidenceThreshold"  column="confidence_threshold"/>
+        <result property="mediaDigest"          column="media_digest"/>
+        <result property="startedAt"            column="started_at"/>
+        <result property="finishedAt"           column="finished_at"/>
+        <result property="inferenceDurationMs"  column="inference_duration_ms"/>
+        <result property="detections"           column="detections"/>
+        <result property="evidenceRefs"         column="evidence_refs"/>
+        <result property="rawResultRef"         column="raw_result_ref"/>
+        <result property="errorCode"            column="error_code"/>
+        <result property="errorMessage"         column="error_message"/>
+        <result property="retryCount"           column="retry_count"/>
+        <result property="traceId"              column="trace_id"/>
+        <result property="isSimulated"          column="is_simulated"/>
+        <result property="createdBy"            column="created_by"/>
+        <result property="createdAt"            column="created_at"/>
+        <result property="updatedBy"            column="updated_by"/>
+        <result property="updatedAt"            column="updated_at"/>
+    </resultMap>
+
+    <sql id="AlgorithmTaskColumns">
+        t.id, t.task_no, t.event_id, t.point_id, t.camera_id, t.camera_code,
+        t.warehouse_id, t.region_id, t.org_id,
+        t.task_type, t.media_type, t.media_refs, t.normal_reference_ref, t.roi,
+        t.execution_status, t.conclusion, t.vehicle_type, t.confidence,
+        t.model_name, t.model_version, t.algorithm_version, t.config_version,
+        t.confidence_threshold, t.media_digest,
+        t.started_at, t.finished_at, t.inference_duration_ms,
+        t.detections, t.evidence_refs, t.raw_result_ref,
+        t.error_code, t.error_message, t.retry_count, t.trace_id,
+        t.is_simulated, t.created_by, t.created_at, t.updated_by, t.updated_at
+    </sql>
+
+    <!--
+      ========== 时间列输出格式 ==========
+      PostgreSQL 的 TIMESTAMP 经 MyBatis 转成 String 会带 6 位小数，
+      统一在 SQL 侧格式化成 yyyy-MM-dd HH:mm:ss，让真实库与 Mock 响应完全同形。
+      注意：排序仍用裸列，不用格式化后的字符串。
+      direction_name 在 SQL 侧用 CASE 现算，保证列表与导出都带中文方向。
+    -->
+    <sql id="EventColumns">
+        e.id                AS event_id,
+        e.event_no,
+        e.plate_no,
+        e.vehicle_type,
+        e.vehicle_color,
+        e.direction,
+        CASE e.direction WHEN 'IN' THEN '入库' WHEN 'OUT' THEN '出库' ELSE e.direction END AS direction_name,
+        e.point_id,
+        e.gate_name,
+        to_char(e.recognized_at, 'YYYY-MM-DD HH24:MI:SS')  AS recognized_at,
+        e.warehouse_id, e.warehouse_name,
+        e.camera_code,
+        e.algorithm_status, e.confidence,
+        e.verify_status, e.processed_by,
+        to_char(e.processed_at, 'YYYY-MM-DD HH24:MI:SS') AS processed_at,
+        e.verify_opinion, e.event_version
+    </sql>
+
+    <sql id="EventDetailColumns">
+        <include refid="EventColumns"/>,
+        e.event_desc, e.is_simulated
+    </sql>
+
+    <!-- 今日识别车辆列（不含审计/仓库等，只取左侧卡片所需） -->
+    <sql id="TodayVehicleColumns">
+        e.id                AS event_id,
+        e.plate_no,
+        e.vehicle_type,
+        e.vehicle_color,
+        e.direction,
+        CASE e.direction WHEN 'IN' THEN '入库' WHEN 'OUT' THEN '出库' ELSE e.direction END AS direction_name,
+        e.point_id,
+        e.gate_name,
+        to_char(e.recognized_at, 'YYYY-MM-DD HH24:MI:SS')  AS recognized_at,
+        e.verify_status
+    </sql>
+
+    <!-- ========== 公共筛选条件 ========== -->
+    <sql id="EventFilters">
+        <where>
+            <if test="query.plateNo != null and query.plateNo != ''">
+                AND e.plate_no LIKE CONCAT('%', #{query.plateNo}, '%')
+            </if>
+            <if test="query.vehicleType != null and query.vehicleType != ''">
+                AND e.vehicle_type = #{query.vehicleType}
+            </if>
+            <if test="query.direction != null and query.direction != ''">
+                AND e.direction = #{query.direction}
+            </if>
+            <if test="query.gateName != null and query.gateName != ''">
+                AND e.gate_name LIKE CONCAT('%', #{query.gateName}, '%')
+            </if>
+            <if test="query.verifyStatus != null and query.verifyStatus != ''">
+                <choose>
+                    <when test="query.verifyStatus == 'VERIFIED'">
+                        AND e.verify_status IN ('VERIFIED', 'REJECTED')
+                    </when>
+                    <otherwise>
+                        AND e.verify_status = #{query.verifyStatus}
+                    </otherwise>
+                </choose>
+            </if>
+            <!-- warehouseId / pointId 为 Long：BIGINT 列不接受 varchar 绑定，故只判空 -->
+            <if test="query.warehouseId != null">
+                AND e.warehouse_id = #{query.warehouseId}
+            </if>
+            <if test="query.pointId != null">
+                AND e.point_id = #{query.pointId}
+            </if>
+            <!-- 行政区筛选：来自前端业务条件（TimeBaseQueryDTO），不是数据范围 -->
+            <if test="query.regionId != null and query.regionId != ''">
+                AND e.region_id = #{query.regionId}
+            </if>
+            <!--
+              Service 从登录态注入的仓库数据范围。
+              与业务筛选条件以 AND 叠加，且不接受前端传入
+              （scopeUnrestricted / scopeWarehouseIds 标了 @JsonIgnore）。
+            -->
+            <if test="!query.scopeUnrestricted">
+                <choose>
+                    <when test="query.scopeWarehouseIds != null and query.scopeWarehouseIds.size() > 0">
+                        AND e.warehouse_id IN
+                        <foreach collection="query.scopeWarehouseIds" item="wid"
+                                 open="(" close=")" separator=",">
+                            #{wid}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        AND 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+            <if test="query.startTime != null">
+                AND e.recognized_at &gt;= #{query.startTime}
+            </if>
+            <if test="query.endTime != null">
+                AND e.recognized_at &lt;= #{query.endTime}
+            </if>
+        </where>
+    </sql>
+
+    <!-- ========== 今日识别车辆（左侧列表，按今天过滤） ========== -->
+    <select id="listTodayVehicle" resultMap="TodayVehicleResultMap">
+        SELECT <include refid="TodayVehicleColumns"/>
+        FROM ai_vehicle_event e
+        <where>
+            <!-- 数据范围块 1 / 11 -->
+            <if test="!unrestricted">
+                <choose>
+                    <when test="warehouseIds != null and warehouseIds.size() > 0">
+                        AND e.warehouse_id IN
+                        <foreach collection="warehouseIds" item="wid"
+                                 open="(" close=")" separator=",">
+                            #{wid}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        AND 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+            <!-- 「今日」：以识别时间落在数据库当天为准 -->
+            AND e.recognized_at &gt;= CURRENT_DATE
+            AND e.recognized_at &lt;  CURRENT_DATE + INTERVAL '1 day'
+        </where>
+        ORDER BY e.recognized_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- ========== 识别点位列表（供 Service 定位摄像头、判定在线） ========== -->
+    <select id="listPoints"
+            resultType="com.chinaunicom.smartstorage.admin.dto.vehicleRecognition.MonitorPointRespDTO">
+        SELECT p.id              AS pointId,
+               p.point_code      AS pointCode,
+               p.point_name      AS pointName,
+               p.warehouse_id    AS warehouseId,
+               p.warehouse_name  AS warehouseName,
+               p.camera_code     AS cameraCode,
+               p.camera_name     AS cameraName,
+               p.camera_id       AS platformCameraId,
+               p.device_status   AS deviceStatus,
+               p.alarm_status    AS alarmStatus,
+               to_char(p.last_heartbeat_at, 'YYYY-MM-DD HH24:MI:SS') AS lastHeartbeatAt,
+               to_char(p.latest_event_at,   'YYYY-MM-DD HH24:MI:SS') AS latestEventAt,
+               p.sort_no         AS sortNo
+        FROM ai_vehicle_monitor_point p
+        <where>
+            <!-- 数据范围块 2 / 11 -->
+            <if test="!unrestricted">
+                <choose>
+                    <when test="warehouseIds != null and warehouseIds.size() > 0">
+                        AND p.warehouse_id IN
+                        <foreach collection="warehouseIds" item="wid"
+                                 open="(" close=")" separator=",">
+                            #{wid}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        AND 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+            AND p.enabled = TRUE
+        </where>
+        ORDER BY p.sort_no ASC
+    </select>
+
+    <!-- ========== 首页最近识别记录 ========== -->
+    <select id="listRecentEvent" resultMap="EventResultMap">
+        SELECT <include refid="EventColumns"/>
+        FROM ai_vehicle_event e
+        <where>
+            <!-- 数据范围块 3 / 11 -->
+            <if test="!unrestricted">
+                <choose>
+                    <when test="warehouseIds != null and warehouseIds.size() > 0">
+                        AND e.warehouse_id IN
+                        <foreach collection="warehouseIds" item="wid"
+                                 open="(" close=")" separator=",">
+                            #{wid}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        AND 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        ORDER BY e.recognized_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- ========== 历史分页查询 ========== -->
+    <select id="listEventByCondition" resultMap="EventResultMap">
+        SELECT <include refid="EventColumns"/>
+        FROM ai_vehicle_event e
+        <!-- 数据范围块 4 / 11（EventFilters，同时服务导出） -->
+        <include refid="EventFilters"/>
+        <choose>
+            <when test="query.orderByRecognizedDesc != null and !query.orderByRecognizedDesc">
+                ORDER BY e.recognized_at ASC
+            </when>
+            <otherwise>
+                ORDER BY e.recognized_at DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- ========== 导出查询（不分页，受 limit 约束） ========== -->
+    <select id="listEventForExport" resultMap="EventResultMap">
+        SELECT <include refid="EventColumns"/>
+        FROM ai_vehicle_event e
+        <include refid="EventFilters"/>
+        ORDER BY e.recognized_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <!--
+      ========== 记录主行（带数据范围，越权校验） ==========
+      仓库约束必须写在 SQL 里：EventColumns 不含 org_id / region_id，
+      取回整行后在 Java 判断会因字段缺失而无法比较。
+    -->
+    <select id="getEventSummaryInScope" resultMap="EventResultMap">
+        SELECT <include refid="EventColumns"/>
+        FROM ai_vehicle_event e
+        WHERE e.id = #{eventId}
+        <!-- 数据范围块 5 / 11 -->
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND e.warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <!-- ========== 记录详情（带数据范围） ========== -->
+    <select id="getEventDetailInScope" resultMap="EventDetailResultMap">
+        SELECT <include refid="EventDetailColumns"/>
+        FROM ai_vehicle_event e
+        WHERE e.id = #{eventId}
+        <!-- 数据范围块 6 / 11 -->
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND e.warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <!--
+      ========== 证据列表 ==========
+      库里存的是受控对象存储引用，这里原样带回列别名即 DTO 字段名，
+      由 Service 经 MediaGateway 换成短时地址后才返回前端。
+    -->
+    <select id="listEvidenceByEventId"
+            resultType="com.chinaunicom.smartstorage.admin.dto.vehicleRecognition.VehicleEvidenceRespDTO">
+        SELECT v.id             AS evidenceId,
+               v.evidence_type  AS evidenceType,
+               v.original_ref   AS originalUrl,
+               v.annotated_ref  AS annotatedUrl,
+               v.thumbnail_ref  AS thumbnailUrl,
+               to_char(v.captured_at, 'YYYY-MM-DD HH24:MI:SS') AS capturedAt,
+               v.camera_code    AS cameraCode,
+               v.content_hash   AS contentHash,
+               v.sort_no        AS sortNo
+        FROM ai_vehicle_evidence v
+        WHERE v.event_id = #{eventId}
+        ORDER BY v.sort_no ASC
+    </select>
+
+    <!-- ========== 核实审计记录（追加式全量历史） ========== -->
+    <select id="listProcessRecords"
+            resultType="com.chinaunicom.smartstorage.admin.dto.vehicleRecognition.ProcessRecordRespDTO">
+        SELECT r.id              AS recordId,
+               r.status_before   AS statusBefore,
+               r.status_after    AS statusAfter,
+               r.process_result  AS processResult,
+               r.process_opinion AS processOpinion,
+               r.processed_by    AS processedBy,
+               to_char(r.processed_at, 'YYYY-MM-DD HH24:MI:SS') AS processedAt,
+               r.source          AS source
+        FROM ai_vehicle_process_record r
+        WHERE r.event_id = #{eventId}
+        ORDER BY r.processed_at ASC
+    </select>
+
+    <!--
+      ========== 核实：乐观锁更新 ==========
+
+      关键点：
+      1. WHERE 含 event_version，版本不匹配则更新 0 行；
+      2. 只更新核实相关字段，不触碰 algorithm_status / confidence 与识别结果列；
+      3. event_version 自增，供下次提交使用；
+      4. verify_status 只允许从 PENDING 迁移，终态（VERIFIED/REJECTED）不被重复处理。
+
+      ⚠️ 参数名必须与 Mapper 接口声明逐字一致（遮挡那版踩过 processedAt/updateAt 不一致的坑）。
+    -->
+    <update id="updateVerifyWithVersion">
+        UPDATE ai_vehicle_event
+        SET verify_status   = #{verifyStatus},
+            processed_by    = #{processedBy},
+            processed_at    = #{updatedAt},
+            verify_opinion  = #{verifyOpinion},
+            event_version   = event_version + 1,
+            updated_by      = #{processedBy},
+            updated_at      = #{updatedAt}
+        WHERE id = #{eventId}
+          AND event_version = #{eventVersion}
+          AND verify_status = 'PENDING'
+    </update>
+
+    <!-- ========== 追加核实审计记录（只插入） ========== -->
+    <insert id="appendProcessRecord">
+        INSERT INTO ai_vehicle_process_record (
+            id, event_id, event_no, status_before, status_after,
+            process_result, process_opinion, processed_by, processed_at,
+            source, created_at
+        ) VALUES (
+            #{id}, #{eventId}, #{eventNo}, #{statusBefore}, #{statusAfter},
+            #{processResult}, #{processOpinion}, #{processedBy}, #{processedAt},
+            #{source}, #{createdAt}
+        )
+    </insert>
+
+    <!-- ==================================================================
+         ========== 算法任务（ai_vehicle_algorithm_task） ==========
+
+         三条约束在这里落地，缺一不可：
+         1. 归属列只能由已校验范围的记录行反推（selectAlgorithmTaskContext），
+            不能让前端把 warehouse_id / point_id 拼进请求体带来落库；
+         2. 结果列更新一律 COALESCE：算法适配层在任务未产出时返回的是空对象，
+            无条件覆盖会把已落库的结论、置信度、检测框抹成 NULL；
+         3. 回写事件只动 algorithm_*，绝不出现 verify_* / plate_no /
+            vehicle_type / direction / event_version。
+         ================================================================== -->
+
+    <!-- ========== 算法任务归属骨架（从识别记录反推） ========== -->
+    <select id="selectAlgorithmTaskContext" resultMap="AlgorithmTaskResultMap">
+        SELECT e.id            AS event_id,
+               e.point_id,
+               e.camera_id,
+               e.camera_code,
+               e.warehouse_id,
+               e.region_id,
+               e.org_id
+        FROM ai_vehicle_event e
+        WHERE e.id = #{eventId}
+        <!-- 数据范围块 7 / 11 -->
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND e.warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <!-- ========== 落一行算法任务 ========== -->
+    <!-- id 无序列，由应用侧雪花发号；可空列必须显式给 jdbcType，
+         否则 PostgreSQL 会对裸 null 报「无法确定参数类型」。 -->
+    <insert id="insertAlgorithmTask"
+            parameterType="com.chinaunicom.smartstorage.admin.entity.vehicleRecognition.VehicleRecognitionAlgorithmTask">
+        INSERT INTO ai_vehicle_algorithm_task (
+            id, task_no, event_id, point_id, camera_id, camera_code,
+            warehouse_id, region_id, org_id,
+            task_type, media_type, media_refs, normal_reference_ref, roi,
+            execution_status, conclusion, vehicle_type, confidence,
+            model_name, model_version, algorithm_version, config_version,
+            confidence_threshold, media_digest,
+            started_at, finished_at, inference_duration_ms,
+            detections, evidence_refs, raw_result_ref,
+            error_code, error_message, retry_count, trace_id,
+            is_simulated, created_by, created_at, updated_by, updated_at
+        ) VALUES (
+            #{id}, #{taskNo}, #{eventId,jdbcType=BIGINT}, #{pointId},
+            #{cameraId,jdbcType=VARCHAR}, #{cameraCode,jdbcType=VARCHAR},
+            #{warehouseId}, #{regionId,jdbcType=VARCHAR}, #{orgId,jdbcType=BIGINT},
+            #{taskType}, #{mediaType,jdbcType=VARCHAR}, #{mediaRefs,jdbcType=VARCHAR},
+            #{normalReferenceRef,jdbcType=VARCHAR}, #{roi,jdbcType=VARCHAR},
+            #{executionStatus}, #{conclusion,jdbcType=VARCHAR},
+            #{vehicleType,jdbcType=VARCHAR}, #{confidence,jdbcType=NUMERIC},
+            #{modelName,jdbcType=VARCHAR}, #{modelVersion,jdbcType=VARCHAR},
+            #{algorithmVersion,jdbcType=VARCHAR}, #{configVersion,jdbcType=VARCHAR},
+            #{confidenceThreshold,jdbcType=NUMERIC}, #{mediaDigest,jdbcType=VARCHAR},
+            #{startedAt,jdbcType=TIMESTAMP}, #{finishedAt,jdbcType=TIMESTAMP},
+            #{inferenceDurationMs,jdbcType=BIGINT},
+            #{detections,jdbcType=VARCHAR}, #{evidenceRefs,jdbcType=VARCHAR},
+            #{rawResultRef,jdbcType=VARCHAR},
+            #{errorCode,jdbcType=VARCHAR}, #{errorMessage,jdbcType=VARCHAR},
+            #{retryCount,jdbcType=INTEGER}, #{traceId,jdbcType=VARCHAR},
+            #{isSimulated}, #{createdBy,jdbcType=VARCHAR}, #{createdAt,jdbcType=TIMESTAMP},
+            #{updatedBy,jdbcType=VARCHAR}, #{updatedAt,jdbcType=TIMESTAMP}
+        )
+    </insert>
+
+    <!-- ========== 任务结果更新（COALESCE，只进不退） ========== -->
+    <update id="updateAlgorithmTask">
+        UPDATE ai_vehicle_algorithm_task
+        SET execution_status     = #{task.executionStatus},
+            conclusion           = COALESCE(#{task.conclusion,jdbcType=VARCHAR}, conclusion),
+            vehicle_type         = COALESCE(#{task.vehicleType,jdbcType=VARCHAR}, vehicle_type),
+            confidence           = COALESCE(#{task.confidence,jdbcType=NUMERIC}, confidence),
+            model_name           = COALESCE(#{task.modelName,jdbcType=VARCHAR}, model_name),
+            model_version        = COALESCE(#{task.modelVersion,jdbcType=VARCHAR}, model_version),
+            algorithm_version    = COALESCE(#{task.algorithmVersion,jdbcType=VARCHAR}, algorithm_version),
+            config_version       = COALESCE(#{task.configVersion,jdbcType=VARCHAR}, config_version),
+            started_at           = COALESCE(#{task.startedAt,jdbcType=TIMESTAMP}, started_at),
+            finished_at          = COALESCE(#{task.finishedAt,jdbcType=TIMESTAMP}, finished_at),
+            inference_duration_ms = COALESCE(#{task.inferenceDurationMs,jdbcType=BIGINT}, inference_duration_ms),
+            detections           = COALESCE(#{task.detections,jdbcType=VARCHAR}, detections),
+            evidence_refs        = COALESCE(#{task.evidenceRefs,jdbcType=VARCHAR}, evidence_refs),
+            raw_result_ref       = COALESCE(#{task.rawResultRef,jdbcType=VARCHAR}, raw_result_ref),
+            error_code           = COALESCE(#{task.errorCode,jdbcType=VARCHAR}, error_code),
+            error_message        = COALESCE(#{task.errorMessage,jdbcType=VARCHAR}, error_message),
+            retry_count          = COALESCE(#{task.retryCount,jdbcType=INTEGER}, retry_count),
+            is_simulated         = COALESCE(#{task.isSimulated,jdbcType=BOOLEAN}, is_simulated),
+            updated_by           = #{task.updatedBy,jdbcType=VARCHAR},
+            updated_at           = #{task.updatedAt,jdbcType=TIMESTAMP}
+        WHERE task_no = #{task.taskNo}
+        <!-- 数据范围块 8 / 11：轮询接口也得按范围收敛，
+             否则拿到别人的 task_no 就能读走它的结论。 -->
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </update>
+
+    <!-- ========== 按任务编号查询（轮询用） ========== -->
+    <select id="selectAlgorithmTaskByTaskNo" resultMap="AlgorithmTaskResultMap">
+        SELECT <include refid="AlgorithmTaskColumns"/>
+        FROM ai_vehicle_algorithm_task t
+        WHERE t.task_no = #{taskNo}
+        <!-- 数据范围块 9 / 11 -->
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND t.warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <!-- ========== 某条记录的算法任务历史 ========== -->
+    <select id="selectAlgorithmTasksByEvent" resultMap="AlgorithmTaskResultMap">
+        SELECT <include refid="AlgorithmTaskColumns"/>
+        FROM ai_vehicle_algorithm_task t
+        WHERE t.event_id = #{eventId}
+        <!-- 数据范围块 10 / 11 -->
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND t.warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+        <!-- 进行中的任务 started_at 可能为空，NULLS LAST 保证它们不顶掉最新已完成任务；
+             id 兜底是为了同一时刻落库的多条任务顺序稳定（分页/轮询都要幂等的排序）。 -->
+        ORDER BY t.started_at DESC NULLS LAST, t.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <!--
+      ========== 回写识别记录的算法字段 ==========
+
+      ⚠️ 本语句是「算法重跑」唯一能碰事件表的地方，边界必须写死在这里：
+        · 只写 algorithm_task_id / algorithm_status / confidence / updated_*；
+        · confidence 用 COALESCE —— 重跑失败时保留事件原值，
+          不然一次算法抖动会把历史置信度清空，页面凭空出现「暂无」；
+        · 绝不出现 verify_* / processed_*：那是人工核实链路，
+          与算法状态相互独立（产品口径：算法结论不得被人工改写，反之也不行）；
+        · 绝不出现 plate_no / vehicle_type / vehicle_color / direction：
+          识别结果列属于事件本身，模拟适配器给的是占位车牌，
+          写回去等于用假数据篡改已展示过的记录（PII + 统计双重风险）；
+        · 绝不出现 event_version：它是人工核实的乐观锁，
+          重跑递增它会让并发中的核实误报「记录已被其他用户处理」。
+    -->
+    <update id="writeBackEventAlgorithm">
+        UPDATE ai_vehicle_event
+        SET algorithm_task_id = COALESCE(#{taskId,jdbcType=BIGINT}, algorithm_task_id),
+            algorithm_status  = COALESCE(#{executionStatus,jdbcType=VARCHAR}, algorithm_status),
+            confidence        = COALESCE(#{confidence,jdbcType=NUMERIC}, confidence),
+            updated_by        = #{updatedBy,jdbcType=VARCHAR},
+            updated_at        = #{updatedAt,jdbcType=TIMESTAMP}
+        WHERE id = #{eventId}
+        <!-- 数据范围块 11 / 11：写操作的范围条件同样必须下推到 SQL -->
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </update>
+
+</mapper>

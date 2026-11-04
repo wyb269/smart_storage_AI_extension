@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  事件处理记录 Mapper
+
+  依据 AI_HANDOFF.md：
+  - 第17.6节：处理历史为追加式记录，不得只返回最后一次
+  - 第29.4节：处理人由后端按登录态写入，不接受前端传入
+-->
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aivision.doorAnomaly.AiEventProcessRecordMapper">
+
+    <!-- 查询全部处理记录，按时间正序返回完整历史 -->
+    <select id="listProcessRecords"
+            resultType="com.chinaunicom.smartstorage.admin.dto.doorAnomaly.ProcessRecordRespDTO">
+        SELECT id                AS recordId,
+               event_id          AS eventId,
+               status_before     AS statusBefore,
+               status_after      AS statusAfter,
+               process_result    AS processResult,
+               process_opinion   AS processOpinion,
+               processed_by      AS processedBy,
+               to_char(processed_at, 'YYYY-MM-DD HH24:MI:SS') AS processedAt,
+               source            AS source
+        FROM ai_event_process_record
+        WHERE event_id = #{eventId}
+        ORDER BY processed_at ASC, id ASC
+    </select>
+
+    <!--
+      追加写入处理记录。
+
+      纯 INSERT，绝不 UPDATE —— 这是「追加式」的技术保证。
+      即使主表乐观锁更新失败，Service 也不会调用本方法；
+      更新成功时必写，保证审计完整（第29.4节）。
+    -->
+    <insert id="appendProcessRecord">
+        INSERT INTO ai_event_process_record
+        (id, event_id, event_no, status_before, status_after,
+         process_result, process_opinion, processed_by, processed_at, source, created_at)
+        VALUES
+        (#{id}, #{eventId}, #{eventNo}, #{statusBefore}, #{statusAfter},
+         #{processResult}, #{processOpinion}, #{processedBy}, #{processedAt}, #{source}, #{createdAt})
+    </insert>
+
+</mapper>

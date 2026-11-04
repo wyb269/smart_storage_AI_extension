@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.order.WarehouseOutOrderMapper">
+
+
+
+    <!--查询单个-->
+    <select id="getWarehouseOutOrderById" resultType="com.chinaunicom.smartstorage.admin.dto.order.WarehouseOutOrderRespDTO">
+        select
+            a.id,
+            b.name,
+            b.phone,
+            d.warehouse_name,
+            (select name from base_user_info where id = d.keeper) as keeper,
+            (select label from base_dict_data where type = 'GRAIN_VARIETY' and description = d.grain_variety) as grainVariety,
+            (select label from base_dict_data where type = 'GRAIN_YEAR' and description = d.grain_year) as grainYear,
+            (select label from base_dict_data where type = 'GRAIN_GRADE' and description = CAST(d.grain_grade AS VARCHAR)) as  grainGrade,
+            (select label from base_dict_data where type = 'GRAIN_SOURCE_TYPE' and description = CAST(a.grain_source_type AS VARCHAR)) as grainSourceType,
+            a.plan_weight as planWeight,
+            a.completed_weight as completedWeight,
+            a.state,
+            a.start_time as startTime,
+            a.end_time as endTime,
+            a.remarks,
+            c.name as addUser,
+            a.add_time as addTime
+        from warehouse_out_order a
+                 left join sts_customer b on b.id = a.customer_id
+                 left join base_user_info c on c.id = a.add_user
+                 left join sts_warehouse d on d.id = a.warehouse_id
+        where a.id = #{id}
+    </select>
+
+    <!--列表-->
+    <select id="listWarehouseOutOrderByConditionOnPage" resultType="com.chinaunicom.smartstorage.admin.dto.order.WarehouseOutOrderQueryRespDTO">
+        select a.id,
+        b.name,
+        d.warehouse_name,
+        (select label from base_dict_data where type = 'GRAIN_VARIETY' and description = d.grain_variety) as grainVariety,
+        (select label from base_dict_data where type = 'GRAIN_SOURCE_TYPE' and description = CAST(a.grain_source_type AS VARCHAR)) as grainSourceType,
+        a.plan_weight as planWeight,
+        a.completed_weight as completedWeight,
+        a.state,
+        a.start_time as startTime,
+        a.end_time as endTime,
+        c.name as addUser,
+        a.add_time as addTime
+        from warehouse_out_order a
+        left join sts_customer b on a.customer_id =b.id
+        left join base_user_info c on c.id = a.add_user
+        left join sts_warehouse d on d.id = a.warehouse_id
+        <where>
+            <if test="name != null and name != ''">
+                and b.name like concat('%', #{name}, '%')
+            </if>
+            <if test="grainVariety != null and grainVariety != ''">
+                and d.grain_variety = #{grainVariety}
+            </if>
+            <if test="warehouseId != null and warehouseId != ''">
+                and a.warehouse_id = #{warehouseId}
+            </if>
+        </where>
+        order by a.add_time desc
+    </select>
+</mapper>
+

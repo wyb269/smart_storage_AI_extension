@@ -1,0 +1,122 @@
+# =====================================================================
+# AI 视觉类功能 · 共享独立数据源与权限配置
+#
+# ⚠️ 本文件是【按数据库】而非【按功能】的配置。
+#    所有落在 smart_storage_ai_extension 的功能共用这一份：
+#      - 仓门异动监测   doorAnomaly
+#      - 视频遮挡检测   videoOcclusion
+#      - 后续功能只需在 permission.rights 下追加一段，不必新增配置文件
+#
+#    不修改 application-dev.yml 中原有的 spring.datasource 配置，
+#    主库连接完全不受影响。
+#
+# 本文件通过主 application.yml 的
+#   spring.config.import: optional:classpath:application-ai-vision.yml
+# 引入；optional 前缀保证文件缺失时应用仍可正常启动。
+#
+# 设计目标：
+#   1. 本类功能的表只落在 smart_storage_ai_extension；
+#   2. 绝不访问 smart-storage-site 或任何其他数据库；
+#   3. 数据库主机、账号、密码一律通过环境变量注入，
+#      本文件不保留任何内部地址或凭据默认值。
+#
+# 使用方式（全部通过环境变量注入，禁止写入本文件）：
+#   export AI_VISION_DB_ENABLED='true'
+#   export AI_VISION_DB_HOST='<数据库主机>'
+#   export AI_VISION_DB_PORT='<数据库端口>'
+#   export AI_VISION_DB_USER='<应用账号>'
+#   export AI_VISION_DB_PASSWORD='<应用密码>'
+#   然后以 dev profile 启动即可。
+#
+# 未设置 AI_VISION_DB_ENABLED=true 时（默认 false）：
+#   不创建该数据源，各功能回退到内存实现，其余功能完全不受影响。
+#
+# ⚠️ 环境变量前缀已从 AI_DOOR_DB_* 改为 AI_VISION_DB_*（基座共享化）。
+#    启动脚本与部署配置需同步改名，否则数据源不会启用、
+#    各功能会静默回退到内存实现。
+# =====================================================================
+
+ai-vision:
+  datasource:
+    # 主机与端口不提供任何内部地址默认值，必须由环境变量显式注入。
+    # 未注入时保持为空，配合 enabled=false 不会创建数据源。
+    host: ${AI_VISION_DB_HOST:}
+    port: ${AI_VISION_DB_PORT:}
+    username: ${AI_VISION_DB_USER:}
+    password: ${AI_VISION_DB_PASSWORD:}
+
+    # 连接池：独立于主库，避免相互影响
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      max-lifetime: 1200000
+      keepalive-time: 60000
+      connection-timeout: 20000
+      idle-timeout: 300000
+      pool-name: AiVisionHikariPool
+
+    # 是否启用真实数据库。
+    # 【默认 false】：不创建该数据源，各功能回退到内存实现，
+    # 便于在未注入数据库凭据的环境下安全启动与前端联调。
+    enabled: ${AI_VISION_DB_ENABLED:false}
+
+  # ------------------------------------------------------------------
+  # 功能权限
+  #
+  # 本项目的 authority 是 base_rights_info.id 的字符串形式（数字），
+  # 不是权限码。现网实测：超级管理员被授予 10101=添加、10203=删除 等，
+  # 且当前【尚不存在】AI 视觉类功能的权限行与菜单行。
+  #
+  # 因此本开关默认 false：只校验已登录 + 数据范围下推，行为与接入前一致。
+  # 上线前必须由 DBA 在主库执行各功能的 rbac_provision.sql
+  # 插入菜单行、权限行并绑定角色组，然后把实际分配到的数字 ID 注入。
+  #
+  # 结构是「功能 → 操作 → 数字权限 ID」两层，
+  # 由 AiVisionPermissionChecker.has(feature, operation) 消费。
+  #
+  # enabled=true 而某个功能或操作没有配置 ID 时，该操作一律拒绝
+  # （失败即拒绝），不会退化成「只要登录就放行」。
+  # ------------------------------------------------------------------
+  permission:
+    enabled: ${AI_VISION_PERMISSION_ENABLED:false}
+    rights:
+      # ---------- 仓门异动监测 ----------
+      doorAnomaly:
+        VIEW: ${AI_DOOR_RIGHT_VIEW:}
+        EXPORT: ${AI_DOOR_RIGHT_EXPORT:}
+        PROCESS: ${AI_DOOR_RIGHT_PROCESS:}
+      # ---------- 视频遮挡检测 ----------
+      videoOcclusion:
+        VIEW: ${AI_OCCL_RIGHT_VIEW:}
+        EXPORT: ${AI_OCCL_RIGHT_EXPORT:}
+        PROCESS: ${AI_OCCL_RIGHT_PROCESS:}
+      # ---------- 人员行为监测 ----------
+      personBehavior:
+        VIEW: ${AI_PERSON_RIGHT_VIEW:}
+        EXPORT: ${AI_PERSON_RIGHT_EXPORT:}
+        PROCESS: ${AI_PERSON_RIGHT_PROCESS:}
+      # ---------- 地面积水监测 ----------
+      groundWater:
+        VIEW: ${AI_WATER_RIGHT_VIEW:}
+        EXPORT: ${AI_WATER_RIGHT_EXPORT:}
+        PROCESS: ${AI_WATER_RIGHT_PROCESS:}
+      # ---------- 皮带机下站人监测 ----------
+      beltMachine:
+        VIEW: ${AI_BELT_RIGHT_VIEW:}
+        EXPORT: ${AI_BELT_RIGHT_EXPORT:}
+        PROCESS: ${AI_BELT_RIGHT_PROCESS:}
+      # ---------- 周界入侵识别 ----------
+      perimeterIntrusion:
+        VIEW: ${AI_PERIM_RIGHT_VIEW:}
+        EXPORT: ${AI_PERIM_RIGHT_EXPORT:}
+        PROCESS: ${AI_PERIM_RIGHT_PROCESS:}
+      # ---------- 粮面虫害智能识别 ----------
+      pestDetection:
+        VIEW: ${AI_PEST_RIGHT_VIEW:}
+        EXPORT: ${AI_PEST_RIGHT_EXPORT:}
+        PROCESS: ${AI_PEST_RIGHT_PROCESS:}
+      # ---------- 车辆智能识别 ----------
+      vehicleRecognition:
+        VIEW: ${AI_VEHICLE_RIGHT_VIEW:}
+        EXPORT: ${AI_VEHICLE_RIGHT_EXPORT:}
+        PROCESS: ${AI_VEHICLE_RIGHT_PROCESS:}

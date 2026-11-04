@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.rbac.MenuRightsLinkMapper">
+    <resultMap id="RoleGroupMap" type="com.chinaunicom.smartstorage.admin.entity.rbac.menu.MenuRightsLinked">
+        <result column="menu_id" property="menuId"/>
+        <result column="rights_id" property="rightsId"/>
+    </resultMap>
+    <insert id="saveMenuRightsLinked">
+        insert into base_menu_rights_link (rights_id, menu_id,role_id)
+        VALUES
+        <foreach collection="list" item="MenuRightsLinked" index="index" separator=",">
+            (#{MenuRightsLinked.rightsId}, #{MenuRightsLinked.menuId}, #{MenuRightsLinked.roleId})
+        </foreach>
+    </insert>
+</mapper>

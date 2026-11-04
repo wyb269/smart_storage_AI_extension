@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.rbac.OrganizationMapper">
+    <resultMap id="OrganizationMap" type="com.chinaunicom.smartstorage.admin.entity.rbac.Organization">
+        <id column="id" property="id"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="parent_name" property="parentName"/>
+        <result column="name" property="name"/>
+        <result column="levels" property="levels"/>
+        <result column="add_user" property="addUser"/>
+        <result column="add_time" property="addTime"/>
+        <result column="update_user" property="updateUser"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="type" property="type"/>
+        <result column="unify_encoding" property="unifyEncoding"/>
+        <result column="description" property="description"/>
+        <result column="company_nature" property="companyNature"/>
+        <result column="business_registration_number" property="businessRegistrationNumber"/>
+        <result column="legal_person_name" property="legalPersonName"/>
+        <result column="legal_representative_phone_number" property="legalRepresentativePhoneNumber"/>
+        <result column="province" property="province"/>
+        <result column="province_name" property="provinceName"/>
+        <result column="city" property="city"/>
+        <result column="city_name" property="cityName"/>
+        <result column="warehouse_nature" property="warehouseNature"/>
+        <result column="design_storage" property="designStorage"/>
+        <result column="design_area" property="designArea"/>
+        <result column="library_area_code" property="libraryAreaCode"/>
+        <result column="contact_person" property="contactPerson"/>
+        <result column="contact_phone" property="contactPhone"/>
+        <result column="detailed_address" property="detailedAddress"/>
+    </resultMap>
+    <sql id="base_sql">
+        boi.id,
+        boi.parent_id,
+        boi."name",
+        boi.levels,
+        boi.add_user,
+        boi.add_time,
+        boi.update_user,
+        boi.update_time,
+        boi."type",
+        boi.unify_encoding,
+        boi.description,
+        boi.company_nature,
+        boi.business_registration_number,
+        boi.legal_person_name,
+        boi.legal_representative_phone_number,
+        boi.province,
+        boi.province_name,
+        boi.city,
+        boi.city_name,
+        boi.warehouse_nature,
+        boi.design_storage,
+        boi.design_area,
+        boi.library_area_code,
+        boi.contact_person,
+        boi.contact_phone,
+        boi.detailed_address
+    </sql>
+    <delete id="deleteOrganization">
+        delete
+        from base_organization_info
+        where id in (WITH RECURSIVE child_nodes AS (SELECT boi.id
+                                                    FROM base_organization_info boi
+                                                    WHERE id = #{id}
+                                                    UNION
+                                                    SELECT boi2.id
+                                                    FROM base_organization_info boi2
+                                                             JOIN child_nodes pn ON pn.id = boi2.parent_id)
+                     SELECT *
+                     FROM child_nodes)
+    </delete>
+    <select id="listOrganizationByConditionOnPage" resultMap="OrganizationMap">
+        SELECT
+        <include refid="base_sql">
+        </include>,
+                      boi2.name as parent_name
+    FROM base_organization_info boi
+             left join base_organization_info boi2
+                       on boi.parent_id = boi2.id
+        <where>
+            <if test="orgId != null and orgId != ''">
+                and boi.id in (WITH RECURSIVE child_nodes AS (SELECT boi.id
+                                                              FROM base_organization_info boi
+                                                              WHERE id = #{orgId}
+                                                              UNION
+                                                              SELECT boi2.id
+                                                              FROM base_organization_info boi2
+                                                                       JOIN child_nodes pn ON pn.id = boi2.parent_id)
+                               SELECT *
+                               FROM child_nodes)
+            </if>
+            <if test="name != null and name != ''">
+                and boi.name like CONCAT('%'
+                    , CONCAT(#{name}
+                                             , '%'))
+            </if>
+        </where>
+
+        order by boi.add_time desc
+    </select>
+    <select id="listOrganizationChildById" resultMap="OrganizationMap">
+        WITH RECURSIVE child_nodes AS (
+        SELECT
+        <include refid="base_sql">
+        </include>
+        FROM base_organization_info boi
+        WHERE id = #{id}
+        UNION
+        SELECT boi2.id,
+               boi2.parent_id,
+               boi2."name",
+               boi2.levels,
+               boi2.add_user,
+               boi2.add_time,
+               boi2.update_user,
+               boi2.update_time,
+               boi2."type",
+               boi2.unify_encoding,
+               boi2.description,
+               boi2.company_nature,
+               boi2.business_registration_number,
+               boi2.legal_person_name,
+               boi2.legal_representative_phone_number,
+               boi2.province,
+               boi2.province_name,
+               boi2.city,
+               boi2.city_name,
+               boi2.warehouse_nature,
+               boi2.design_storage,
+               boi2.design_area,
+               boi2.library_area_code,
+               boi2.contact_person,
+               boi2.contact_phone,
+               boi2.detailed_address
+        FROM base_organization_info boi2
+                 JOIN child_nodes pn ON pn.id = boi2.parent_id
+        )
+        SELECT *, boi2.name as parent_name
+        FROM child_nodes cn
+                 left join base_organization_info boi2 on cn.parent_id = boi2.id;
+    </select>
+    <select id="listOrganizationParentById" resultMap="OrganizationMap">
+        WITH RECURSIVE parent_nodes AS (
+        SELECT
+        <include refid="base_sql">
+        </include>
+        FROM base_organization_info boi
+        WHERE id = #{id}
+        UNION
+        SELECT boi2.id,
+               boi2.parent_id,
+               boi2."name",
+               boi2.levels,
+               boi2.add_user,
+               boi2.add_time,
+               boi2.update_user,
+               boi2.update_time,
+               boi2."type",
+               boi2.unify_encoding,
+               boi2.description,
+               boi2.company_nature,
+               boi2.business_registration_number,
+               boi2.legal_person_name,
+               boi2.legal_representative_phone_number,
+               boi2.province,
+               boi2.province_name,
+               boi2.city,
+               boi2.city_name,
+               boi2.warehouse_nature,
+               boi2.design_storage,
+               boi2.design_area,
+               boi2.library_area_code,
+               boi2.contact_person,
+               boi2.contact_phone,
+               boi2.detailed_address
+        FROM base_organization_info boi2
+                 JOIN parent_nodes pn ON pn.parent_id = boi2.id
+        )
+        SELECT *, boi2.name as parent_name
+        FROM parent_nodes pn
+                 left join base_organization_info boi2 on pn.parent_id = boi2.id;
+    </select>
+    <select id="listOrganizationChildByIdAndLevels" resultMap="OrganizationMap">
+        WITH RECURSIVE child_nodes AS (
+        SELECT
+        <include refid="base_sql">
+        </include>
+        FROM base_organization_info boi
+        WHERE id = #{id}
+        UNION
+        SELECT boi2.id,
+               boi2.parent_id,
+               boi2."name",
+               boi2.levels,
+               boi2.add_user,
+               boi2.add_time,
+               boi2.update_user,
+               boi2.update_time,
+               boi2."type",
+               boi2.unify_encoding,
+               boi2.description,
+               boi2.company_nature,
+               boi2.business_registration_number,
+               boi2.legal_person_name,
+               boi2.legal_representative_phone_number,
+               boi2.province,
+               boi2.province_name,
+               boi2.city,
+               boi2.city_name,
+               boi2.warehouse_nature,
+               boi2.design_storage,
+               boi2.design_area,
+               boi2.library_area_code,
+               boi2.contact_person,
+               boi2.contact_phone,
+               boi2.detailed_address
+        FROM base_organization_info boi2
+                 JOIN child_nodes pn ON pn.id = boi2.parent_id
+        )
+        SELECT *, boi2.name as parent_name
+        FROM child_nodes cn
+                 left join base_organization_info boi2 on cn.parent_id = boi2.id
+        where cn.levels = #{levels};
+    </select>
+
+    <select id="getOrganizationByDetail" resultMap="OrganizationMap">
+        select
+        <include refid="base_sql">
+        </include>,
+                      boi2.name as parent_name
+    from base_organization_info boi
+             left join base_organization_info boi2 on boi.parent_id = boi2.id
+    where boi.id = #{id}
+    </select>
+</mapper>

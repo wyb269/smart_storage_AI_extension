@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.uid.WorkerNodeMapper">
+    <resultMap id="WorkerNodeEntityMap"
+               type="com.baidu.fsg.uid.worker.entity.WorkerNodeEntity">
+        <id column="id" property="id"/>
+        <result column="host_name" property="hostName"/>
+        <result column="port" property="port"/>
+        <result column="type" property="type"/>
+        <result column="launch_date" property="launchDate"/>
+        <result column="created" property="created"/>
+        <result column="modified" property="modified"/>
+    </resultMap>
+
+    <insert id="addWorkerNode" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.baidu.fsg.uid.worker.entity.WorkerNodeEntity">
+        INSERT INTO base_worker_node
+        (host_name,
+         port,
+         type,
+         launch_date,
+         modified,
+         created)
+        VALUES (#{hostName},
+                #{port},
+                #{type},
+                #{launchDate},
+                NOW(),
+                NOW())
+    </insert>
+    <select id="getWorkerNodeByHostPort" resultMap="WorkerNodeEntityMap">
+        SELECT id,
+               host_name,
+               port,
+               type,
+               launch_date,
+               modified,
+               created
+        FROM base_worker_node
+        WHERE HOST_NAME = #{host}
+          AND PORT = #{port}
+    </select>
+</mapper>

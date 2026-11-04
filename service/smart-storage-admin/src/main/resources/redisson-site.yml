@@ -1,0 +1,16 @@
+singleServerConfig:
+  password: "${SMART_STORAGE_ADMIN_REDISSON_SITE_PASSWORD_1:}"
+  clientName: smart-storage-admin
+  address: "redis://127.0.0.1:48099"
+  database: 14
+  connectionMinimumIdleSize: 8
+  connectionPoolSize: 64
+  idleConnectionTimeout: 60000
+  connectTimeout: 10000
+  timeout: 3000
+  retryAttempts: 3
+  retryInterval: 1500
+  pingConnectionInterval: 30000
+  keepAlive: true
+  tcpNoDelay: true
+codec: !<org.redisson.codec.JsonJacksonCodec> {}

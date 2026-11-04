@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aggregation.WarehouseMapper">
+
+    <!--详情-->
+    <select id="getWarehouseById" resultType="com.chinaunicom.smartstorage.admin.dto.aggregation.warehouse.WarehouseRespDTO">
+        select sw.id,
+               sw.warehouse_name as warehouseName,
+               sw.warehouse_type as warehouseType,
+               bui.name as keeper,
+               sw.current_weight as currentWeight,
+               sw.max_weight as maxWeight,
+               sw.state,
+               sw.remarks,
+               sw.grain_variety as grainVariety,
+               sw.grain_year as grainYear,
+               sw.grain_grade as grainGrade,
+               (select label from base_dict_data where type = 'GRAIN_VARIETY' and description = sw.grain_variety) as grainVarietyLabel,
+               (select label from base_dict_data where type = 'GRAIN_YEAR' and description = sw.grain_year) as grainYearLabel,
+               (select label from base_dict_data where type = 'GRAIN_GRADE' and description = CAST(sw.grain_grade AS VARCHAR)) as grainGradeLabel
+        from sts_warehouse sw
+        left join base_user_info bui on bui.id = sw.keeper
+        where  sw.id = #{id}
+    </select>
+    <!--列表-->
+    <select id="listWarehouseByCondition" resultType="com.chinaunicom.smartstorage.admin.dto.aggregation.warehouse.WarehouseQueryRespDTO">
+        select sw.id,
+        sw.warehouse_name as warehouseName,
+        sw.warehouse_type as warehouseType,
+        bui.name as keeper,
+        sw.current_weight as currentWeight,
+        sw.max_weight as maxWeight,
+        sw.state,
+        (select label from base_dict_data where type = 'GRAIN_VARIETY' and description = sw.grain_variety) as grainVariety
+        from sts_warehouse sw
+        left join base_user_info bui on bui.id = sw.keeper
+        <where>
+            <if test="id != null and id != ''">
+                and sw.id like concat('%', #{id}, '%')
+            </if>
+            <if test="warehouseName != null and warehouseName != ''">
+                and sw.warehouse_name like concat('%', #{warehouseName}, '%')
+            </if>
+            <if test="warehouseType != null and warehouseType != ''">
+                and sw.warehouse_type = #{warehouseType}
+            </if>
+            <if test="grainVariety != null and grainVariety != ''">
+                and sw.grain_variety = #{grainVariety}
+            </if>
+            <if test="state != null and state != ''">
+                and sw.state = #{state}
+            </if>
+        </where>
+        order by sw.add_time desc
+    </select>
+    <select id="selectByGrainVariety" resultType="com.chinaunicom.smartstorage.admin.dto.aggregation.warehouse.WarehouseRespDTO">
+        select sw.id,
+        sw.warehouse_name as warehouseName,
+        sw.warehouse_type as warehouseType,
+        sw.grain_variety as grainVariety,
+        sw.grain_year as grainYear,
+        sw.grain_grade as grainGrade,
+        (select label from base_dict_data where type = 'GRAIN_VARIETY' and description = sw.grain_variety) as grainVarietyLabel,
+        (select label from base_dict_data where type = 'GRAIN_YEAR' and description = sw.grain_year) as grainYearLabel,
+        (select label from base_dict_data where type = 'GRAIN_GRADE' and description = CAST(sw.grain_grade AS VARCHAR)) as grainGradeLabel
+        from sts_warehouse sw
+        <where>
+            sw.state = 1 and sw.current_weight &lt; sw.max_weight
+            <if test="grainVariety != null and grainVariety != ''">
+                and sw.grain_variety = #{grainVariety}
+            </if>
+        </where>
+        order by sw.add_time desc
+    </select>
+</mapper>
+

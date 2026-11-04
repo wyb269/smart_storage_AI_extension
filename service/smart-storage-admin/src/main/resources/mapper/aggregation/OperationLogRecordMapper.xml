@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aggregation.OperationLogRecordMapper">
+    <resultMap id="OperationLogRecordMap"
+               type="com.chinaunicom.smartstorage.admin.entity.aggregation.OperationLogRecord">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="business_type" property="businessType"/>
+        <result column="method" property="method"/>
+        <result column="request_method" property="requestMethod"/>
+        <result column="oper_type" property="operType"/>
+        <result column="oper_name" property="operName"/>
+        <result column="oper_url" property="operUrl"/>
+        <result column="oper_ip" property="operIp"/>
+        <result column="oper_param" property="operParam"/>
+        <result column="json_result" property="jsonResult"/>
+        <result column="state" property="state"/>
+        <result column="error_msg" property="errorMsg"/>
+        <result column="oper_time" property="operTime"/>
+        <result column="token" property="token"/>
+        <result column="process_time" property="processTime"/>
+    </resultMap>
+    <sql id="base_sql">
+            ol.id,
+            ol.title,
+            ol.business_type,
+            ol.method,
+            ol.request_method,
+            ol.oper_type,
+            ol.oper_name,
+            ol.oper_url,
+            ol.oper_ip,
+            ol.oper_param,
+            ol.json_result,
+            ol.state,
+            ol.error_msg,
+            ol.oper_time,
+            ol.token,
+            ol.process_time
+    </sql>
+
+    <select id="listOperationLogRecordByCondition" resultMap="OperationLogRecordMap">
+        select
+        <include refid="base_sql"/>
+        from base_operation_log ol
+        <where>
+            <if test=" title != null and title != ''">
+                and ol.title like concat('%',#{title},'%')
+            </if>
+            <if test=" businessType != null and businessType != ''">
+                and ol.business_type = #{businessType}
+            </if>
+            <if test=" operType != null and operType != ''">
+                and ol.oper_type = #{operType}
+            </if>
+            <if test=" operName != null and operName != ''">
+                and ol.oper_name = #{operName}
+            </if>
+            <if test=" state != null and state != ''">
+                and ol.state = #{state}
+            </if>
+            <if test="startTime != null and startTime != ''">
+                and ol.oper_time <![CDATA[>=]]> #{startTime}
+            </if>
+            <if test="endTime != null and endTime != ''">
+                and ol.oper_time <![CDATA[<=]]> #{endTime}
+            </if>
+        </where>
+    </select>
+</mapper>

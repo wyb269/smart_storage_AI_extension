@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.card.SmartCardMapper">
+    <resultMap id="SmartCardMap" type="com.chinaunicom.smartstorage.admin.entity.card.SmartCard">
+        <!--@Table sts_smart_card-->
+        <result property="id" column="id"/>
+        <result property="cardNo" column="card_no"/>
+        <result property="physicalCardNumber" column="physical_card_number"/>
+        <result property="state" column="state"/>
+        <result property="addUser" column="add_user"/>
+        <result property="addTime" column="add_time"/>
+        <result property="taskFlowAddUserName" column="tf_add_user_name"/>
+        <result property="taskFlowAddTime" column="tf_add_time"/>
+        <result property="taskFlowJobNo" column="tf_job_no"/>
+        <result property="taskFlowJobType" column="tf_job_type"/>
+        <result property="taskFlowJobStatus" column="tf_job_status"/>
+    </resultMap>
+    <resultMap id="SwipeCardRespDTOMap" type="com.chinaunicom.smartstorage.admin.dto.card.SwipeCardRespDTO">
+        <id column="id" property="id"/>
+        <result column="card_no" property="cardNo"/>
+        <result column="task_id" property="taskId"/>
+        <result column="physical_card_number" property="physicalCardNumber"/>
+        <result column="state" property="state"/>
+        <result column="job_no" property="jobNo"/>
+        <result column="job_status" property="jobStatus"/>
+        <result column="job_type" property="jobType"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+        sc.id, sc.card_no, sc.physical_card_number, sc.state, sc.add_user, sc.add_time
+    </sql>
+
+    <select id="listSmartCardByCondition" resultMap="SmartCardMap">
+        select
+        <include refid="Base_Column_List"/>,
+                                               ui.name       as tf_add_user_name,
+                                               tf.add_time   as tf_add_time,
+                                               tf.job_no     as tf_job_no,
+                                               tf.job_type   as tf_job_type,
+                                               tf.job_status as tf_job_status
+    from sts_smart_card sc
+             left join public.task_flow tf on sc.card_no = tf.card_no
+             left join base_user_info ui on tf.add_user = ui.id
+        <where>
+            <if test="cardNo != null and cardNo != ''">
+                and sc.card_no like concat('%', #{cardNo}, '%')
+            </if>
+            <if test="physicalCardNumber != null and physicalCardNumber != ''">
+                and sc.physical_card_number like concat('%', #{physicalCardNumber}, '%')
+            </if>
+            <if test="state != null and state != ''">
+                and sc.state = #{state}
+            </if>
+        </where>
+        order by sc.add_time desc, sc.id desc
+    </select>
+
+    <select id="swipeCard" resultMap="SwipeCardRespDTOMap">
+        select sc.id,
+               sc.card_no,
+               sc.physical_card_number,
+               sc.state,
+               tf.job_no,
+               tf.job_status,
+               tf.job_type,
+               tf.id as task_id
+        from sts_smart_card sc
+                 left join task_flow tf on tf.smart_card_id = sc.id
+        where sc.physical_card_number = #{physicalCardNumber}
+    </select>
+</mapper>
+

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.rbac.RightsMapper">
+    <resultMap id="RightsMap" type="com.chinaunicom.smartstorage.admin.entity.rbac.Rights">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+    </resultMap>
+    <sql id="base_sql">
+            bri.id,
+            bri.name
+    </sql>
+    <select id="listRights" resultMap="RightsMap">
+        select
+        <include refid="base_sql">
+        </include>
+        from base_rights_info bri
+    </select>
+
+    <select id="listRightsByRoleGroupId" resultMap="RightsMap">
+        select
+        brin.id,brin.name
+        from base_role_group_link brgl
+        join base_role_info bri on bri.id = brgl.role_id
+        join base_role_menu brm on brm.role_id = bri.id
+        join base_menu_rights bmr on bmr.menu_id = brm.menu_id
+        join base_rights_info brin on brin.id = bmr.rights_id
+        where brgl.group_id = #{groupId}
+        group by brin.id;
+    </select>
+</mapper>

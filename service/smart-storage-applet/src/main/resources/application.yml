@@ -1,0 +1,45 @@
+chinkframe:
+  application:
+    projectDisplay: smart-storage-APPLET
+    projectName: smart-storage-applet
+    projectVersion: v0.0.1
+    projectContextPath: ${server.servlet.context-path}
+server:
+  servlet:
+    context-path: /smart-storage-applet
+  shutdown: graceful
+
+spring:
+  jmx:
+    default-domain: ${chinkframe.application.projectName}
+  lifecycle:
+    timeout-per-shutdown-phase: 60s
+  main:
+    allow-circular-references: true
+  mvc:
+    pathmatch:
+      matching-strategy: ANT_PATH_MATCHER
+  profiles:
+    active: site
+  threads:
+    virtual:
+      enabled: true
+pagehelper:
+  offset-as-page-num: true
+  pageSizeZero: true
+  params: count=contsql
+  rowBoundsWithCount: true
+  supportMethodsArguments: true
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    aggressive-lazy-loading: false
+    lazy-load-trigger-methods: "doLazyLoadingNow,equals,clone,hashCode,toString"
+    cache-enabled: true
+    jdbc-type-for-null: null
+  global-config:
+    db-config:
+      update-strategy: not_null
+  mapper-locations: classpath*:/mapper/**/*.xml
+  #  config-location: classpath:mybatis-config.xml
+  type-aliases-package: com.chinaunicom.smartstorage.applet.entity.*

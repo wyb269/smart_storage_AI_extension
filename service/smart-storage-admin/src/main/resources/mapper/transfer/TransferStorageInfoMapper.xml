@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.transfer.TransferStorageInfoMapper">
+    <resultMap id="TransferStorageInfoMap"
+               type="com.chinaunicom.smartstorage.admin.entity.transfer.TransferStorageInfo">
+        <!--@Table sts_transfer_storage_info-->
+        <result column="id" property="id"/>
+        <result column="transfer_type" property="transferType"/>
+        <result column="source_warehouse_id" property="sourceWarehouseId"/>
+        <result column="source_warehouse_name" property="sourceWarehouseName"/>
+        <result column="target_warehouse_id" property="targetWarehouseId"/>
+        <result column="target_warehouse_name" property="targetWarehouseName"/>
+        <result column="grain_variety" property="grainVariety"/>
+        <result column="estimated_quantity" property="estimatedQuantity"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="transfer_reason" property="transferReason"/>
+        <result column="status" property="status"/>
+        <result column="add_user" property="addUser"/>
+        <result column="add_user_name" property="addUserName"/>
+        <result column="add_time" property="addTime"/>
+        <result column="update_user" property="updateUser"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        tsi.id,
+        tsi.transfer_type,
+        tsi.source_warehouse_id,
+        tsi.target_warehouse_id,
+        tsi.grain_variety,
+        tsi.estimated_quantity,
+        tsi.start_time,
+        tsi.end_time,
+        tsi.transfer_reason,
+        tsi."status",
+        tsi.add_user,
+        tsi.add_time,
+        tsi.update_user,
+        tsi.update_time
+    </sql>
+
+    <select id="listTransferStorageInfoByCondition" resultMap="TransferStorageInfoMap">
+        select<include refid="Base_Column_List"/>,
+                                                     sw1.warehouse_name as source_warehouse_name,
+                                                     sw2.warehouse_name as target_warehouse_name,
+                                                     bui.name           as add_user_name
+    from sts_transfer_storage_info tsi
+             left join sts_warehouse sw1 on tsi.source_warehouse_id = sw1.id
+             left join sts_warehouse sw2 on tsi.target_warehouse_id = sw2.id
+             left join base_user_info bui on tsi.add_user = bui.id
+        <where>
+            <if test="transferType != null and transferType != ''">
+                and tsi.transfer_type = #{transferType}
+            </if>
+            <if test="sourceWarehouseId != null and sourceWarehouseId != ''">
+                and tsi.source_warehouse_id = #{sourceWarehouseId}
+            </if>
+            <if test="targetWarehouseId != null and targetWarehouseId != ''">
+                and tsi.target_warehouse_id = #{targetWarehouseId}
+            </if>
+            <if test="startTime != null">
+                and tsi.start_time <![CDATA[>=]]> #{startTime}
+            </if>
+            <if test="endTime != null">
+                and tsi.end_time <![CDATA[<=]]> #{endTime}
+            </if>
+            <if test="status != null and status != ''">
+                and tsi."status" = #{status}
+            </if>
+            <if test="userId != null and userId != ''">
+                and tsi.add_user = #{userId}
+            </if>
+            <if test="applicant != null and applicant != ''">
+                and bui.name like concat('%', #{applicant}, '%')
+            </if>
+        </where>
+        order by tsi.add_time desc, tsi.id desc
+    </select>
+
+    <select id="getTransferStorageInfoByDetail" resultMap="TransferStorageInfoMap">
+        select<include refid="Base_Column_List"/>,
+                                                     sw1.warehouse_name as source_warehouse_name,
+                                                     sw2.warehouse_name as target_warehouse_name,
+                                                     bui.name           as add_user_name
+    from sts_transfer_storage_info tsi
+             left join sts_warehouse sw1 on tsi.source_warehouse_id = sw1.id
+             left join sts_warehouse sw2 on tsi.target_warehouse_id = sw2.id
+             left join base_user_info bui on tsi.add_user = bui.id
+    where tsi.id = #{id}
+    </select>
+</mapper>
+

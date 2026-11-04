@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aggregation.DictDataMapper">
+    <resultMap id="DictDataMap" type="com.chinaunicom.smartstorage.admin.entity.aggregation.dict.DictData">
+        <id column="id" property="id"/>
+        <result column="sort" property="sort"/>
+        <result column="label" property="label"/>
+        <result column="description" property="description"/>
+        <result column="type" property="type"/>
+        <result column="is_default" property="isDefault"/>
+        <result column="show_state" property="showState"/>
+        <result column="remark" property="remark"/>
+        <result column="css_class" property="cssClass"/>
+        <result column="list_class" property="listClass"/>
+    </resultMap>
+
+    <select id="listDictDataByConditon" resultMap="DictDataMap">
+        select bdd.id,
+               bdd.sort,
+               bdd.label,
+               bdd.description,
+               bdd.type,
+               bdd.is_default,
+               bdd.show_state,
+               bdd.remark,
+               bdd.css_class,
+               bdd.list_class
+        from base_dict_data bdd
+        <where>
+            <if test="label != null and label != ''">
+                and bdd.label like concat('%', #{label}, '%')
+            </if>
+            <if test="type != null and type != ''">
+                and bdd.type = #{type}
+            </if>
+            <if test="showState != null and showState != ''">
+                and bdd.show_state = #{showState}
+            </if>
+        </where>
+    </select>
+</mapper>

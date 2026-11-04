@@ -1,0 +1,362 @@
+/* 菜单 */
+.t-default-menu.t-menu--dark .t-menu__logo:not(:empty) {
+  /* background: rgba(68, 118, 250, 1); */
+}
+
+.t-default-menu.t-menu--dark .t-menu__item.t-is-active:not(.t-is-opened) {
+  color: #f59f0c!important;
+}
+.t-default-menu.t-menu--dark .t-menu__item.t-is-active:not(.t-is-opened) .t-icon {
+  color:#f59f0c!important;
+}
+.t-default-menu__inner {
+  /* padding: 0px 10px; */
+}
+
+.t-menu--scroll>div {
+  padding: 0px 10px;
+}
+.t-default-menu__inner .t-menu {
+  box-shadow: none!important;
+}
+
+.t-default-menu.t-menu--dark .t-menu__item.t-is-active{
+  border-radius: 5px;
+}
+.t-menu--dark .t-menu__item:hover:not(.t-is-active):not(.t-is-opened):not(.t-is-disabled) {
+  background: none!important;
+  color: #fff;
+}
+.t-default-menu .t-menu__sub .t-menu__item {
+  padding-left: 21px!important;
+}
+
+.t-menu--dark .t-menu__item {
+  --ripple-color:  rgba(225, 147, 20, .3)!important;
+}
+
+.t-default-menu.t-menu--dark .t-menu__item{
+  margin-top: 5px;
+}
+
+.forNewclass .t-select .t-fake-arrow--active {
+  color: #f59f0c;
+}
+
+/* 填写表单 */
+.forNewclass .t-input {
+  height: 33px;
+  border-color:#e3e7f0;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.forNewclass .t-input  .t-input__inner {
+  /* color: #8e97a8; */
+  font-family: PingFang SC;
+}
+
+
+/* 表单处理 */
+  .newclassNewDialog  .t-input:hover , .forNewclass .t-input:hover , .forNewClassTableAndsearch .t-input:hover {
+    border-color:#f59f0c;
+  }
+  .newclassNewDialog .t-input:focus , .forNewclass .t-input:focus , .forNewClassTableAndsearch .t-input:focus  {
+    border-color:#f59f0c;
+  }
+
+  .newclassNewDialog .t-is-focused , .forNewclass .t-is-focused , .forNewClassTableAndsearch .t-is-focused  {
+    box-shadow: 0 0 0 2px #f1e0d1;
+    border-color:#f59f0c;
+  }
+  .newclassNewDialog .t-textarea__inner ,.forNewclass .t-textarea__inner {
+    border-radius: 3px;
+  }
+  .newclassNewDialog .t-textarea__inner:hover , .forNewclass .t-textarea__inner:hover{
+    border-color:#f59f0c;
+    box-shadow: 0 0 0 2px #f1e0d1;
+  }
+  .newclassNewDialog .t-textarea__inner:focus , .forNewclass .t-textarea__inner:focus{
+    border-color:#f59f0c;
+    box-shadow: 0 0 0 2px #f1e0d1;
+  }
+  .newclassNewDialog .t-select .t-fake-arrow--active , .forNewclass .t-select .t-fake-arrow--active ,.forNewClassTableAndsearch .t-select .t-fake-arrow--active {
+    color:#f59f0c;
+  }
+
+  .newclassNewDialog .t-checkbox.t-is-checked .t-checkbox__input {
+  /* background:#f59f0c;
+  border-color: #f59f0c; */
+
+  }
+
+  .t-select-option {
+    height: 32px !important;
+    font-size: 14px !important;
+    font-family: PingFang SC !important;
+  }
+
+  .t-select-option.t-is-selected:not(.t-is-disabled)  {
+    color: rgba(0,0,0,.9) !important;
+    background-color: rgb(245 241 233) !important;
+  }
+
+.forNewclass .t-input.t-is-disabled{
+  background: #f9fafc;
+  border:1px solid #e3e7f0;
+  font-family: PingFang SC;
+  font-weight: 400;
+  font-style: Regular;
+  font-size: 14px;
+  leading-trim: NONE;
+  line-height: 100%;
+  letter-spacing: 0px;
+  vertical-align: middle;
+  border-radius: 3px;
+}
+
+
+.forNewclass .t-input.t-is-disabled .t-input__inner {
+  color: #8e97a8;
+}
+
+
+
+.forNewclass .t-form__label {
+  font-family: PingFang SC;
+  font-weight: 400;
+  font-style: Regular;
+  font-size: 15px;
+  leading-trim: NONE;
+  letter-spacing: 0px;
+  vertical-align: middle;
+  color: rgba(26, 26, 26, 1);
+  margin-bottom: 2px;
+}
+/* 表格 */
+.forNewClassTableAndsearch  .t-table th {
+  background: #f9fafc;
+  border-bottom: 1px solid #e8ebf2;
+  border-top: 1px solid #e8ebf2!important;
+  color:rgba(30, 41, 59, 1);
+  font-size: 12px;
+}
+
+.forNewClassTableAndsearch  .t-table td{
+  border-bottom: 1px solid rgba(227, 231, 239, 1);
+  color:rgba(30, 41, 59, 1);
+}
+
+.forNewClassTableAndsearch  .tdop .t-button--variant-base.t-button--theme-warning {
+  background: rgba(245, 158, 11, 1);
+  border-color:rgba(245, 158, 11, 1);
+}
+.forNewClassTableAndsearch  .tdop .flt {
+  color:rgba(107, 118, 139, 1);
+  border:1px solid rgba(227, 231, 239, 1);
+}
+
+
+
+.forNewClassTableAndsearch .t-pagination__number.t-is-current{
+  background: rgba(15, 39, 68, 1) !important;
+  border: 1px solid rgba(15, 39, 68, 1) !important;
+}
+
+/* 弹窗及表单 */
+.newclassNewDialog .t-button--variant-base.t-button--theme-warning {
+  background: rgba(245, 158, 11, 1);
+  border-color:rgba(245, 158, 11, 1);
+}
+
+.t-menu--dark .t-menu__popup .t-menu__item.t-is-active {
+  /* background: rgba(38, 155, 130, 1)!important; */
+}
+.t-default-menu.t-menu--dark .t-menu__item:hover:not(.t-is-active):not(.t-is-disabled) {
+  background: none!important;
+}
+.t-breadcrumb__inner {
+  font-size: 14px!important;
+}
+.tdesign-starter-layout {
+  overflow-y: auto!important;
+  height: calc(100vh - 70px)!important;
+}
+
+.list-common-table .t-pagination__total {
+  flex: none!important;
+  margin-right: 30px!important;
+}
+
+.list-common-table .t-switch.t-is-checked {
+  /* background: rgba(38, 155, 130, 1)!important; */
+}
+
+.t-button{
+  border-radius: 3px!important;
+}
+.newDialog .t-dialog {border-radius: 16px;}
+
+
+.newDialog  .t-dialog__header-content {
+  font-family: PingFang SC;
+  font-weight: 500;
+  font-style: Medium;
+  font-size: 20px;
+  leading-trim: NONE;
+  line-height: 100%;
+  letter-spacing: 0px;
+  vertical-align: middle;
+}
+
+.newDialog .t-dialog__header .t-dialog__close {
+  color: rgba(26, 26, 26, 1);
+  width: 26px;
+  height:26px;
+}
+
+.newDialog .t-dialog__header .t-icon {
+  width: 26px !important;
+  height: 26px !important;}
+.newDialog  .t-dialog__header {
+  margin-bottom: 11px;}
+
+.newDialog .form-basic-container {
+  border-bottom: 1px solid rgba(238, 239, 242, 1);
+  border-top: 1px solid rgba(238, 239, 242, 1);
+  box-shadow: none;
+}
+.newDialog .t-dialog__wrap .t-dialog__footer {
+  padding-top: 12px;
+}
+
+.newDialog .t-dialog__wrap .t-dialog__footer .t-button {
+
+  width: 98px;
+  height:38px;
+  font-size: 14px;
+
+}
+
+
+.newDialog .t-dialog__wrap .t-dialog__footer .t-button--variant-base.t-button--theme-success {
+  background: rgba(38, 155, 130, 1);
+  border-color: rgba(38, 155, 130, 1);
+}
+
+.newDialog .t-dialog__wrap .t-dialog__footer .t-button--variant-outline {
+  border: 1px solid  rgba(205, 205, 205, 1);
+  color:rgba(149, 149, 149, 1);
+}
+
+.newDialog .t-form .t-form__label--right {
+  font-size: 13px;
+  line-height: 36px;
+}
+.newDialog .t-form .t-input {
+  font-size: 13px;
+  border-radius: 5px;
+  height: 36px;
+}
+
+
+.deletCon {
+  border-top: 1px solid rgba(238, 239, 242, 1);
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+.deletCon .delectConHeader{
+  margin-bottom:25px;
+}
+.deletCon  .t-icon {
+  margin-top: 2px;
+}
+.deletCon .a {
+  font-family: PingFang SC;
+  font-weight: 500;
+  font-style: Medium;
+  font-size: 16px;
+  leading-trim: NONE;
+  line-height: 100%;
+  letter-spacing: 0px;
+  vertical-align: middle;
+  color:rgba(26, 26, 26, 1);
+}
+.deletCon .b {
+  text-align: center;
+  font-family: PingFang SC;
+  font-weight: 400;
+  font-style: Regular;
+  font-size: 14px;
+  leading-trim: NONE;
+  line-height: 100%;
+  letter-spacing: 0px;
+  vertical-align: middle;
+  color:rgba(26, 26, 26, 1);
+
+}
+
+
+
+.forNewclass .t-range-input {
+  height: 33px;
+  border-color:#e3e7f0;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.forNewclass .t-range-input:hover {
+  border-color: #f59f0c;
+}
+
+.forNewclass .t-range-input-popup--visible .t-range-input {
+  border-color: #f59f0c;
+  box-shadow: 0 0 0 2px #f1e0d1;
+}
+
+.forNewclass .t-range-input-popup--visible .t-range-input .t-icon-calendar {
+  color: #f59f0c;
+}
+
+.t-date-range-picker__panel-container .t-input--focused{
+  border-color: #f59f0c !important;
+  box-shadow: 0 0 0 2px #f1e0d1 !important;
+}
+
+.t-date-range-picker__panel-container .t-input:hover{
+  border-color: #f59f0c !important;
+  border-radius: 3px;
+}
+
+.t-date-range-picker__panel-container .t-select .t-fake-arrow--active{
+  color: #f59f0c;
+}
+
+.t-date-range-picker__panel-container .t-date-picker__cell--hover-highlight::after {
+  background: #faf3ed;
+}
+
+.t-date-range-picker__panel-container .t-date-picker__cell--hover-highlight::after {
+  background: #faf3ed !important;
+}
+
+.t-date-range-picker__panel-container .t-date-picker__cell--now .t-date-picker__cell-inner {
+  color: #f59f0c;
+  background-color: #faf3ed;
+}
+
+.t-date-range-picker__panel-container .t-date-picker__cell--active .t-date-picker__cell-inner {
+  background-color: #f59f0c;
+}
+
+.t-date-range-picker__panel-container .t-date-picker__cell:hover .t-date-picker__cell-inner {
+  box-shadow: inset 0 0 0 1px #f59f0c;
+}
+
+.t-date-range-picker__panel-container .t-date-picker__cell--highlight::before {
+  background-color: #faf3ed;
+}
+
+.forNewclass .t-input.t-is-focused .t-input__suffix .t-icon-calendar {
+  color: #f59f0c;
+}

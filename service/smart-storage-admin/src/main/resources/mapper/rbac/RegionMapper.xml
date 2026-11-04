@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.rbac.RegionMapper">
+    <resultMap id="RegionMap" type="com.chinaunicom.smartstorage.admin.entity.rbac.Region">
+        <id column="id" property="id"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="parent_name" property="parentName"/>
+        <result column="name" property="name"/>
+        <result column="code" property="code"/>
+        <result column="levels" property="levels"/>
+        <result column="full_name" property="fullName"/>
+        <result column="full_id" property="fullId"/>
+    </resultMap>
+    <sql id="base_sql">
+        bri.id,
+        bri.parent_id,
+        bri.name,
+        bri.code,
+        bri.levels,
+        bri.full_name,
+        bri.full_id
+    </sql>
+
+    <select id="listRegionChildByIdAndLevels" resultMap="RegionMap">
+        WITH RECURSIVE child_nodes AS (
+        SELECT
+        <include refid="base_sql">
+        </include>
+        FROM base_region_info bri
+        WHERE id = #{id}
+        UNION
+        SELECT bri2.id,
+               bri2.parent_id,
+               bri2.name,
+               bri2.code,
+               bri2.levels,
+               bri2.full_name,
+               bri2.full_id
+        FROM base_region_info bri2
+                 JOIN child_nodes pn ON pn.id = bri2.parent_id
+        )
+        SELECT *, bri2.name as parent_name
+        FROM child_nodes ch
+                 left join base_region_info bri2 on ch.parent_id = bri2.id
+        where ch.levels = #{levels};
+    </select>
+
+    <select id="listRegionChildById" resultMap="RegionMap">
+        WITH RECURSIVE child_nodes AS (
+        SELECT
+        <include refid="base_sql">
+        </include>
+        FROM base_region_info bri
+        WHERE id = #{id}
+        UNION
+        SELECT bri2.id,
+               bri2.parent_id,
+               bri2.name,
+               bri2.code,
+               bri2.levels,
+               bri2.full_name,
+               bri2.full_id
+        FROM base_region_info bri2
+                 JOIN child_nodes pn ON pn.id = bri2.parent_id
+        )
+        SELECT *, bri2.name as parent_name
+        FROM child_nodes ch
+        left join base_region_info bri2 on ch.parent_id = bri2.id
+    </select>
+
+    <select id="listRegionParentById" resultMap="RegionMap">
+        WITH RECURSIVE parent_nodes AS (
+        SELECT
+        <include refid="base_sql">
+        </include>
+        FROM base_region_info bri
+        WHERE id = #{id}
+        UNION
+        SELECT bri2.id,
+               bri2.parent_id,
+               bri2.name,
+               bri2.code,
+               bri2.levels,
+               bri2.full_name,
+               bri2.full_id
+        FROM base_region_info bri2
+                 JOIN parent_nodes pn ON pn.parent_id = bri2.id
+        )
+        SELECT *, bri2.name as parent_name
+        FROM parent_nodes pn
+        left join base_region_info bri2 on pn.parent_id = bri2.id
+    </select>
+    <select id="listRegionByConditionOnPage" resultMap="RegionMap">
+        select
+        <include refid="base_sql">
+        </include>,
+                      bri2.name as parent_name
+    from base_region_info bri
+             left join base_region_info bri2
+                       on bri.parent_id = bri2.id
+        <where>
+            <if test="id != null and id != ''">
+                and bri.id = #{id}
+            </if>
+            <if test="name != null and name != ''">
+                and bri.name like concat('%'
+                    , #{name}
+                    , '%')
+            </if>
+            <if test="parentId != null and parentId != ''">
+                and bri.parent_id = #{parentId}
+            </if>
+            <if test="parentName != null and parentName != ''">
+                and bri2.name like concat('%'
+                    , #{parentName}
+                    , '%')
+            </if>
+            <if test="levels != null and levels != ''">
+                and bri.levels = #{levels}
+            </if>
+        </where>
+        order by bri.id desc
+    </select>
+</mapper>

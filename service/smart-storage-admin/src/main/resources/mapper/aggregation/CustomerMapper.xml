@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aggregation.customer.StsCustomerMapper">
+
+    <select id="listCustomerByCondition" resultType="com.chinaunicom.smartstorage.admin.dto.aggregation.customer.CustomerQueryRespDTO">
+        select sc.id, sc.name, sc.customer_type as customerType, sc.address, sc.card, sc.phone
+        from sts_customer sc
+        <where>
+            <if test="name != null and name != ''">
+                sc.name like concat('%', #{name}, '%')
+            </if>
+            <if test="card != null and card != ''">
+                and sc.card like concat('%', #{card}, '%')
+            </if>
+            <if test="customerType != null and customerType != ''">
+                and sc.customer_type = #{customerType}
+            </if>
+            <if test="inStatus != null">
+                and exists (
+                select 1 from warehouse_in_order wio
+                where wio.customer_id = sc.id
+                and wio.state = #{inStatus}
+                )
+            </if>
+
+            <if test="outStatus != null">
+                and exists (
+                select 1 from warehouse_out_order woo
+                where woo.customer_id = sc.id
+                and woo.state = #{outStatus}
+                )
+            </if>
+        </where>
+        order by sc.add_time desc
+    </select>
+</mapper>
+

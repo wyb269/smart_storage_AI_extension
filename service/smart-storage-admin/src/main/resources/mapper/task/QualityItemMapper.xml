@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.task.QualityItemMapper">
+
+    <resultMap type="com.chinaunicom.smartstorage.admin.entity.task.QualityItem" id="TaskFlowQualityItemMap">
+        <result property="id" column="id" />
+        <result property="qualityNo" column="quality_no" />
+        <result property="taskId" column="task_id" />
+        <result property="grainYear" column="grain_year" />
+        <result property="grainGrade" column="grain_grade" />
+        <result property="grainPrice" column="grain_price" />
+        <result property="deduction" column="deduction" />
+        <result property="deductionPrice" column="deduction_price" />
+        <result property="warehouseId" column="warehouse_id" />
+        <result property="qualityResult" column="quality_result" />
+        <result property="remarks" column="remarks" />
+        <result property="addUser" column="add_user" />
+        <result property="addTime" column="add_time" />
+        <result property="updateUser" column="update_user" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, quality_no, task_id, grain_year, grain_grade, grain_price, deduction, deduction_price, warehouse_id, quality_result, remarks, add_user, add_time, update_user, update_time
+    </sql>
+
+    <select id="selectByTaskId" resultType="com.chinaunicom.smartstorage.admin.entity.task.QualityItem">
+        select <include refid="Base_Column_List"/>
+        from
+        task_flow_quality_item
+        <where>
+            task_id=#{taskId}
+        </where>
+    </select>
+    <select id="listQualityItemByCondition" resultType="com.chinaunicom.smartstorage.admin.dto.task.qualityItem.QualityItemQueryRespDTO">
+        select tfqi.id,
+               tfqi.quality_no as qualityNo,
+               tfqi.grain_year as grainYear,
+               tfqi.grain_grade as grainGrade,
+               tfqi.grain_price as grainPrice,
+               tfqi.deduction,
+               tfqi.deduction_price as deductionPrice,
+               sw.warehouse_name as warehouseName,
+               tfqi.quality_result as qualityResult,
+               tfqi.add_time as addTime,
+               tf.card_no as cardNo,
+               tfsi.grain_variety as grainVariety
+        from task_flow_quality_item tfqi
+        left join task_flow_sample_item tfsi on tfqi.task_id = tfsi.task_id
+        left join task_flow tf on tfqi.task_id =tf.id
+        left join sts_warehouse sw ON sw.id = tfqi.warehouse_id
+        <where>
+            <if test="userId != null and userId != ''">
+                and tfqi.add_user=#{userId}
+            </if>
+            <if test="startTime != null and startTime != ''">
+                and (to_char(tfqi.add_time, 'YYYY-MM-DD') <![CDATA[>=]]> #{startTime})
+            </if>
+            <if test="endTime != null and endTime != ''">
+                and (to_char(tfqi.add_time, 'YYYY-MM-DD') <![CDATA[<=]]> #{endTime})
+            </if>
+        </where>
+        order by tfqi.add_time desc
+    </select>
+
+    <select id="getQualityItemByTaskId" resultType="com.chinaunicom.smartstorage.admin.entity.task.QualityItem">
+        select a.id, a.quality_no, a.task_id, a.grain_year, a.grain_grade, a.grain_price, a.deduction, a.deduction_price, b.warehouse_name as warehouseId, a.quality_result, a.remarks, c.name as addUser, a.add_time, a.update_user, a.update_time
+        from task_flow_quality_item a
+        left join sts_warehouse b on a.warehouse_id = b.id
+        left join base_user_info c on a.add_user = c.id
+        <where>
+            a.task_id = #{taskId}
+        </where>
+    </select>
+</mapper>
+

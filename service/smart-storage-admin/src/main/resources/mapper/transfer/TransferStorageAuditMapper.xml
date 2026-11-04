@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.transfer.TransferStorageAuditMapper">
+    <resultMap id="TransferStorageAuditMap"
+               type="com.chinaunicom.smartstorage.admin.entity.transfer.TransferStorageAudit">
+        <!--@Table sts_transfer_storage_audit-->
+        <result column="id" property="id"/>
+        <result column="transfer_id" property="transferId"/>
+        <result column="status" property="status"/>
+        <result column="approval_opinion" property="approvalOpinion"/>
+        <result column="audit_user" property="auditUser"/>
+        <result column="audit_user_name" property="auditUserName"/>
+        <result column="audit_time" property="auditTime"/>
+        <result column="add_time" property="addTime"/>
+        <result column="add_user" property="addUser"/>
+        <result column="add_user_name" property="addUserName"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        tsa.id,
+        tsa.transfer_id,
+        tsa."status",
+        tsa.approval_opinion,
+        tsa.audit_user,
+        tsa.audit_time,
+        tsa.add_time,
+        tsa.add_user
+    </sql>
+
+    <select id="listTransferStorageAuditByCondition" resultMap="TransferStorageAuditMap">
+        select
+        <include refid="Base_Column_List"/>,
+                                               bui1.name as audit_user_name,
+                                               bui2.name as add_user_name
+    from sts_transfer_storage_info tsi
+             left join sts_transfer_storage_audit tsa on tsi.id = tsa.transfer_id
+             left join base_user_info bui1 on bui1.id = tsa.audit_user
+             left join base_user_info bui2 on bui2.id = tsa.add_user
+    where tsi.id = #{transferId}
+    order by tsa.add_time desc, tsa.id desc
+    </select>
+
+    <select id="getTransferStorageAuditByDetail" resultMap="TransferStorageAuditMap">
+    </select>
+</mapper>
+

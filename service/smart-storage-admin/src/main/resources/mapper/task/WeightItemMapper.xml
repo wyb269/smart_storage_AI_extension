@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.task.WeightItemMapper">
+    <resultMap id="WeightItemMap" type="com.chinaunicom.smartstorage.admin.entity.task.WeightItem">
+        <!--@Table task_flow_weight_item-->
+        <result property="id" column="id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="weightType" column="weight_type"/>
+        <result property="weight" column="weight"/>
+        <result property="remark" column="remark"/>
+        <result property="vehicleFrontPic" column="vehicle_front_pic"/>
+        <result property="vehicleBackPic" column="vehicle_back_pic"/>
+        <result property="addUser" column="add_user"/>
+        <result property="addUserName" column="add_user_name"/>
+        <result property="addTime" column="add_time"/>
+        <result property="updateUser" column="update_user"/>
+        <result property="updateTime" column="update_time"/>
+        <result column="weight_no" property="weightNo"/>
+        <result column="tf_card_no" property="cardNo"/>
+        <result column="tf_job_no" property="jobNo"/>
+        <result column="tf_job_type" property="jobType"/>
+        <result column="tf_job_status" property="jobStatus"/>
+    </resultMap>
+    <resultMap id="WeightItemInFormRespDTOMap"
+               type="com.chinaunicom.smartstorage.admin.dto.task.weight.WeightItemInFormRespDTO">
+        <result column="tf_carrier_name" property="carrierName"/>
+        <result column="tf_license_plate" property="licensePlate"/>
+        <result column="tf_warehouse_description" property="warehouseDescription"/>
+        <result column="tf_warehouse_label" property="warehouseLabel"/>
+        <result column="card_smart_card_no" property="smartCardNo"/>
+        <result column="cus_name" property="cusName"/>
+    </resultMap>
+    <resultMap id="WeightItemOutFormRespDTOMap"
+               type="com.chinaunicom.smartstorage.admin.dto.task.weight.WeightItemOutFormRespDTO">
+        <result column="tf_carrier_name" property="carrierName"/>
+        <result column="tf_license_plate" property="licensePlate"/>
+        <result column="card_smart_card_no" property="smartCardNo"/>
+        <result column="cus_name" property="cusName"/>
+        <result column="tf_warehouse_name" property="warehouseName"/>
+        <result column="grain_variety" property="grainVariety"/>
+        <result column="grain_grade" property="grainGrade"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+        tfwi.id,
+        tfwi.task_id,
+        tfwi.weight_type,
+        tfwi.weight,
+        tfwi.remark,
+        tfwi.vehicle_front_pic,
+        tfwi.vehicle_back_pic,
+        tfwi.add_user,
+        tfwi.add_time,
+        tfwi.update_user,
+        tfwi.update_time,
+        tfwi.weight_no
+    </sql>
+
+    <select id="listWeightItemByCondition" resultMap="WeightItemMap">
+        select
+        <include refid="Base_Column_List"/>,
+                                               tf.card_no    as tf_card_no,
+                                               tf.job_no     as tf_job_no,
+                                               tf.job_type   as tf_job_type,
+                                               tf.job_status as tf_job_status
+    from task_flow_weight_item tfwi
+             left join task_flow tf on tf.id = tfwi.task_id
+        <where>
+            <if test="jobNo != null and jobNo != ''">
+                tf.job_no = #{jobNo}
+            </if>
+            <if test="weightType != null and weightType != ''">
+                and tfwi.weight_type = #{weightType}
+            </if>
+            <if test="weight != null">
+                and tfwi.weight = #{weight}
+            </if>
+            <if test="remark != null and remark != ''">
+                and tfwi.remark like concat('%', #{remark}, '%')
+            </if>
+            <if test="startTime != null">
+                and tfwi.add_time <![CDATA[>=]]> #{startTime}
+            </if>
+            <if test="endTime != null">
+                and tfwi.add_time <![CDATA[<=]]> #{endTime}
+            </if>
+        </where>
+        order by tfwi.add_time desc, tfwi.id desc
+    </select>
+
+    <select id="getWeightItemByDetailForInForm" resultMap="WeightItemInFormRespDTOMap">
+        select tf.carrier_name   as tf_carrier_name,
+               tf.license_plate  as tf_license_plate,
+               sw.warehouse_name as tf_warehouse_description,
+               sw.warehouse_name as tf_warehouse_label,
+               ssc.card_no       as card_smart_card_no,
+               sc.name           as cus_name
+        from task_flow tf
+                 left join sts_smart_card ssc on ssc.id = tf.smart_card_id
+                 left join sts_customer sc on sc.id = tf.customer_id
+                 left join task_flow_quality_item tfqi on tfqi.task_id = tf.id
+                 left join sts_warehouse sw on sw.id = tfqi.warehouse_id
+        where tf.id = #{taskId}
+    </select>
+    <select id="getWeightItemByDetailForOutForm" resultMap="WeightItemOutFormRespDTOMap">
+        select tf.carrier_name   as tf_carrier_name,
+               tf.license_plate  as tf_license_plate,
+               ssc.card_no       as card_smart_card_no,
+               sc.name           as cus_name,
+               sw.warehouse_name as tf_warehouse_name,
+               sw.grain_variety  as grain_variety,
+               sw.grain_grade    as grain_grade
+        from task_flow tf
+                 left join sts_smart_card ssc on ssc.id = tf.smart_card_id
+                 left join sts_customer sc on sc.id = tf.customer_id
+                 left join warehouse_out_order woo on woo.id = tf.order_id
+                 left join sts_warehouse sw on sw.id = woo.warehouse_id
+        where tf.id = #{taskId}
+    </select>
+    <select id="getWeightItemByTaskId" resultMap="WeightItemMap">
+        select
+        <include refid="Base_Column_List"/>,
+                                               bui.name as add_user_name
+    from task_flow_weight_item tfwi
+             left join base_user_info bui on bui.id = tfwi.add_user
+    where tfwi.task_id = #{taskId}
+      and tfwi.weight_type = #{weightType}
+    </select>
+
+    <select id="getWeightItemByDetail" resultMap="WeightItemMap">
+        select
+        <include refid="Base_Column_List"/>,
+                                               tf.card_no    as tf_card_no,
+                                               tf.job_no     as tf_job_no,
+                                               tf.job_type   as tf_job_type,
+                                               tf.job_status as tf_job_status
+    from task_flow_weight_item tfwi
+             left join task_flow tf on tf.id = tfwi.task_id
+    where tfwi.id = #{id}
+    </select>
+</mapper>
+

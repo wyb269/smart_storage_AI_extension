@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.applet.mapper.aggregation.DictTypeMapper">
+    <resultMap id="DictTypeMap" type="com.chinaunicom.smartstorage.applet.entity.aggregation.dict.DictType">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="type" property="type"/>
+        <result column="show_state" property="showState"/>
+        <result column="remark" property="remark"/>
+        <collection property="listDictData"
+                    ofType="com.chinaunicom.smartstorage.applet.entity.aggregation.dict.DictData">
+            <id column="date_id" property="id"/>
+            <result column="date_sort" property="sort"/>
+            <result column="date_label" property="label"/>
+            <result column="date_value" property="description"/>
+            <result column="date_type" property="type"/>
+            <result column="date_is_default" property="isDefault"/>
+            <result column="date_state" property="showState"/>
+            <result column="date_remark" property="remark"/>
+            <result column="data_css_class" property="cssClass"/>
+            <result column="data_list_class" property="listClass"/>
+        </collection>
+    </resultMap>
+
+    <select id="getDictTypeByTypeWithDictData" resultMap="DictTypeMap">
+        select bdt.id,
+               bdt.name,
+               bdt.type,
+               bdt.show_state,
+               bdt.remark,
+               bdd.id          as date_id,
+               bdd.sort        as date_sort,
+               bdd.label       as date_label,
+               bdd.description as date_value,
+               bdd.type        as date_type,
+               bdd.is_default  as date_is_default,
+               bdd.show_state  as date_state,
+               bdd.remark      as date_remark,
+               bdd.css_class   as data_css_class,
+               bdd.list_class  as data_list_class
+        from base_dict_type bdt
+                 join base_dict_data bdd on bdt.type = bdd.type
+        where bdt.type = #{type}
+          and bdt.show_state = 1
+          and bdd.show_state = 1
+        order by bdd.sort desc, bdd.id desc
+    </select>
+    <select id="listDictTypeByConditionOnPage" resultMap="DictTypeMap">
+        select bdt.id,
+               bdt.name,
+               bdt.type,
+               bdt.show_state,
+               bdt.remark
+        from base_dict_type bdt
+        <where>
+            <if test="name != null and name != ''">
+                and bdt.name like concat('%', #{name}, '%')
+            </if>
+            <if test="type != null and type != ''">
+                and bdt.type = #{type}
+            </if>
+            <if test="showState != null and showState != ''">
+                and bdt.show_state = #{showState,jdbcType=INTEGER}
+            </if>
+        </where>
+    </select>
+</mapper>

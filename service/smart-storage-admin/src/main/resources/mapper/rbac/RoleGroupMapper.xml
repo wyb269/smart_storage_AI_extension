@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.rbac.RoleGroupMapper">
+    <resultMap id="RoleGroupMap" type="com.chinaunicom.smartstorage.admin.entity.rbac.role.RoleGroup">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="org_id" property="orgId"/>
+        <result column="region_id" property="regionId"/>
+        <result column="remark" property="remark"/>
+        <result column="add_user" property="addUser"/>
+        <result column="add_time" property="addTime"/>
+        <result column="update_user" property="updateUser"/>
+        <result column="update_time" property="updateTime"/>
+        <association property="organization"
+                     javaType="com.chinaunicom.smartstorage.admin.entity.rbac.Organization">
+            <id column="org_id" property="id"/>
+            <result column="org_name" property="name"/>
+        </association>
+        <association property="region" javaType="com.chinaunicom.smartstorage.admin.entity.rbac.Region">
+            <id column="reg_id" property="id"/>
+            <result column="reg_name" property="name"/>
+        </association>
+        <collection property="listRole" ofType="com.chinaunicom.smartstorage.admin.entity.rbac.role.Role">
+            <id column="role_id" property="id"/>
+            <result column="role_name" property="name"/>
+        </collection>
+    </resultMap>
+    <sql id="base_sql">
+        brg.id,
+        brg.name,
+        brg.org_id,
+        brg.region_id,
+        brg.remark,
+        brg.add_user,
+        brg.add_time,
+        brg.update_user,
+        brg.update_time
+    </sql>
+
+    <select id="listRoleGroupByConditionOnPage" resultMap="RoleGroupMap">
+        select <include refid="base_sql">
+    </include>,
+                  bmi.id      as org_id,
+                  bmi.name    as org_name,
+                  region.id   as reg_id,
+                  region.name as reg_name,
+                  bri.id      as role_id,
+                  bri.name    as role_name
+    from base_role_group brg
+             left join base_organization_info bmi ON bmi.id = brg.org_id
+             left join base_region_info region ON region.id = brg.region_id
+             left join base_role_group_link brgl on brgl.group_id = brg.id
+             left join base_role_info bri on bri.id = brgl.role_id
+    where brg.id in (
+    select rg.id from (select brg.id
+                       from base_role_group brg
+        <where>
+            <if test="orgId != null and orgId != '' and orgId != 0">
+                and brg.org_id in (WITH RECURSIVE child_nodes AS (SELECT bmi.id
+                                                                  FROM base_organization_info bmi
+                                                                  WHERE id = #{orgId}
+                                                                  UNION
+                                                                  SELECT bmi2.id
+                                                                  FROM base_organization_info bmi2
+                                                                           JOIN child_nodes pn ON pn.id = bmi2.parent_id)
+                                   SELECT *
+                                   FROM child_nodes)
+            </if>
+            <if test="name != null and name != ''">
+                and brg.name like concat('%'
+                    , #{name}
+                    , '%')
+            </if>
+        </where>
+        group by brg.id
+        order by brg.add_time desc, brg.id desc
+        limit #{pageSize} offset #{pageNo} )rg
+        )
+        order by brg.add_time desc, brg.id desc
+    </select>
+
+    <insert id="saveRoleGroupLinked">
+        insert into base_role_group_link (group_id, role_id)
+        VALUES
+        <foreach collection="list" item="RoleGroupLinked" index="index" separator=",">
+            (#{RoleGroupLinked.groupId}, #{RoleGroupLinked.roleId})
+        </foreach>
+    </insert>
+
+    <delete id="deleteRoleGroupLinked">
+        delete
+        from base_role_group_link
+        where group_id = #{groupId}
+    </delete>
+
+    <select id="getRoleGroupByDetail" resultMap="RoleGroupMap">
+        select
+        <include refid="base_sql">
+        </include>,
+                      bri.id   as role_id,
+                      bri.name as role_name
+    from base_role_group brg
+             left join base_role_group_link brgl on brgl.group_id = brg.id
+             left join base_role_info bri on bri.id = brgl.role_id
+    where brg.id = #{id}
+    </select>
+
+    <select id="listRoleGroupByConditionOnPage_COUNT" resultType="java.lang.Long">
+        select count(1) from (select brg.id
+                              from base_role_group brg
+        <where>
+            <if test="orgId != null and orgId != '' and orgId != 0">
+                and brg.org_id in (WITH RECURSIVE child_nodes AS (SELECT bmi.id
+                                                                  FROM base_organization_info bmi
+                                                                  WHERE id = #{orgId}
+                                                                  UNION
+                                                                  SELECT bmi2.id
+                                                                  FROM base_organization_info bmi2
+                                                                           JOIN child_nodes pn ON pn.id = bmi2.parent_id)
+                                   SELECT *
+                                   FROM child_nodes)
+            </if>
+            <if test="name != null and name != ''">
+                and brg.name like concat('%', #{name}, '%')
+            </if>
+        </where>
+        group by brg.id
+        )t
+    </select>
+</mapper>

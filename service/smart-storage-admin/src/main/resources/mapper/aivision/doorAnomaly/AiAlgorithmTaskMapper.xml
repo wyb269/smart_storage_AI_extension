@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  算法任务 Mapper（ai_algorithm_task）
+
+  依据契约 AI_VISION_ALGORITHM_DATA_INTERACTION.md §1：
+  - 重新识别先落一行 QUEUED/RUNNING 任务，再异步轮询更新结果列。
+  - 所有读写按仓库数据范围下推（P0-6），与 AiAnomalyEventMapper 同一套语义。
+  - media_refs / raw_result_ref 只存受控内部引用，禁止任意 URL（第 29.3 节）。
+-->
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aivision.doorAnomaly.AiAlgorithmTaskMapper">
+
+    <resultMap id="AlgorithmTaskResultMap"
+               type="com.chinaunicom.smartstorage.admin.entity.doorAnomaly.AiAlgorithmTask">
+        <id     property="id"                    column="id"/>
+        <result property="taskNo"                column="task_no"/>
+        <result property="candidateEventId"      column="candidate_event_id"/>
+        <result property="doorId"                column="door_id"/>
+        <result property="cameraId"              column="camera_id"/>
+        <result property="warehouseId"           column="warehouse_id"/>
+        <result property="taskType"              column="task_type"/>
+        <result property="mediaType"             column="media_type"/>
+        <result property="mediaRefs"             column="media_refs"/>
+        <result property="normalReferenceRef"    column="normal_reference_ref"/>
+        <result property="roi"                   column="roi"/>
+        <result property="executionStatus"       column="execution_status"/>
+        <result property="conclusion"            column="conclusion"/>
+        <result property="anomalyType"           column="anomaly_type"/>
+        <result property="confidence"            column="confidence"/>
+        <result property="modelName"             column="model_name"/>
+        <result property="modelVersion"          column="model_version"/>
+        <result property="algorithmVersion"      column="algorithm_version"/>
+        <result property="configVersion"         column="config_version"/>
+        <result property="confidenceThreshold"   column="confidence_threshold"/>
+        <result property="mediaDigest"           column="media_digest"/>
+        <result property="startedAt"             column="started_at"/>
+        <result property="finishedAt"            column="finished_at"/>
+        <result property="inferenceDurationMs"   column="inference_duration_ms"/>
+        <result property="detections"            column="detections"/>
+        <result property="evidenceRefs"          column="evidence_refs"/>
+        <result property="rawResultRef"          column="raw_result_ref"/>
+        <result property="errorCode"             column="error_code"/>
+        <result property="errorMessage"          column="error_message"/>
+        <result property="retryCount"            column="retry_count"/>
+        <result property="traceId"               column="trace_id"/>
+        <result property="isSimulated"           column="is_simulated"/>
+        <result property="createdBy"             column="created_by"/>
+        <result property="createdAt"             column="created_at"/>
+        <result property="updatedBy"             column="updated_by"/>
+        <result property="updatedAt"             column="updated_at"/>
+    </resultMap>
+
+    <sql id="TaskColumns">
+        id, task_no, candidate_event_id, door_id, camera_id, warehouse_id,
+        task_type, media_type, media_refs, normal_reference_ref, roi,
+        execution_status, conclusion, anomaly_type, confidence,
+        model_name, model_version, algorithm_version, config_version, confidence_threshold,
+        media_digest, started_at, finished_at, inference_duration_ms,
+        detections, evidence_refs, raw_result_ref, error_code, error_message,
+        retry_count, trace_id, is_simulated,
+        created_by, created_at, updated_by, updated_at
+    </sql>
+
+    <!-- 仓库数据范围条件：非全域且有授权仓库→IN；非全域且空→恒假；全域→不追加 -->
+    <sql id="ScopeCondition">
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid" open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <!-- ========== 落一行任务 ========== -->
+    <insert id="insertTask"
+            parameterType="com.chinaunicom.smartstorage.admin.entity.doorAnomaly.AiAlgorithmTask">
+        INSERT INTO ai_algorithm_task (
+            <include refid="TaskColumns"/>
+        ) VALUES (
+            #{id}, #{taskNo}, #{candidateEventId}, #{doorId}, #{cameraId}, #{warehouseId},
+            #{taskType}, #{mediaType}, #{mediaRefs}, #{normalReferenceRef}, #{roi},
+            #{executionStatus}, #{conclusion}, #{anomalyType}, #{confidence},
+            #{modelName}, #{modelVersion}, #{algorithmVersion}, #{configVersion}, #{confidenceThreshold},
+            #{mediaDigest}, #{startedAt}, #{finishedAt}, #{inferenceDurationMs},
+            #{detections}, #{evidenceRefs}, #{rawResultRef}, #{errorCode}, #{errorMessage},
+            #{retryCount}, #{traceId}, #{isSimulated},
+            #{createdBy}, #{createdAt}, #{updatedBy}, #{updatedAt}
+        )
+    </insert>
+
+    <!-- ========== 按 task_no 在范围内查任务 ========== -->
+    <select id="selectByTaskNoInScope" resultMap="AlgorithmTaskResultMap">
+        SELECT <include refid="TaskColumns"/>
+        FROM ai_algorithm_task
+        WHERE task_no = #{taskNo}
+        <include refid="ScopeCondition"/>
+    </select>
+
+    <!-- ========== 按事件列任务，started_at 倒序 ========== -->
+    <select id="selectByEventIdInScope" resultMap="AlgorithmTaskResultMap">
+        SELECT <include refid="TaskColumns"/>
+        FROM ai_algorithm_task
+        WHERE candidate_event_id = #{eventId}
+        <include refid="ScopeCondition"/>
+        ORDER BY started_at DESC NULLS LAST, id DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- ========== 轮询后更新结果列 ========== -->
+    <!-- 只更新执行/结论相关列，不动主体（task_no/door_id/warehouse_id/candidate_event_id 等） -->
+    <update id="updateTaskResult"
+            parameterType="com.chinaunicom.smartstorage.admin.entity.doorAnomaly.AiAlgorithmTask">
+        UPDATE ai_algorithm_task
+        SET execution_status      = #{executionStatus},
+            conclusion            = #{conclusion},
+            anomaly_type          = #{anomalyType},
+            confidence            = #{confidence},
+            model_name            = #{modelName},
+            model_version         = #{modelVersion},
+            algorithm_version     = #{algorithmVersion},
+            config_version        = #{configVersion},
+            started_at            = #{startedAt},
+            finished_at           = #{finishedAt},
+            inference_duration_ms = #{inferenceDurationMs},
+            detections            = #{detections},
+            error_code            = #{errorCode},
+            error_message         = #{errorMessage},
+            updated_by            = #{updatedBy},
+            updated_at            = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.task.registration.TaskFlowRegistrationMapper">
+
+    <select id="listRegistration"
+            resultType="com.chinaunicom.smartstorage.admin.dto.task.registration.TaskFlowRegistrationListRespDTO">
+    select tfr.id as id,
+           tfr.registration_no as registrationNo,
+           tf.carrier_name as carrierName,
+           tf.license_plate as licensePlate,
+           tf.job_type as jobType,
+           tf.card_no as smartCardID,
+           sc.name as customerName,
+           tfr.add_time as registrationTime
+
+    from task_flow_registration_item tfr
+        left join task_flow tf on tfr.task_id = tf.id
+        left join sts_customer sc on sc.id = tf.customer_id
+        left join sts_smart_card ssc on ssc.id = tf.smart_card_id
+    where DATE(tfr.add_time) = CURRENT_DATE
+    order by tfr.add_time desc
+    </select>
+    <select id="listLogout"
+            resultType="com.chinaunicom.smartstorage.admin.dto.task.registration.TaskFlowRegistrationListRespDTO">
+        select tfo.id as id,
+               tfo.out_no as registrationNo,
+               tf.carrier_name as carrierName,
+               tf.license_plate as licensePlate,
+               tf.job_type as jobType,
+               tf.card_no as smartCardID,
+               sc.name as customerName,
+               tfo.add_time as registrationTime
+
+        from task_flow_out_item tfo
+                 left join task_flow tf on tfo.task_id = tf.id
+                 left join sts_customer sc on sc.id = tf.customer_id
+                 left join sts_smart_card ssc on ssc.id = tf.smart_card_id
+     where DATE(tfo.add_time) = CURRENT_DATE
+
+        order by tfo.add_time desc
+    </select>
+</mapper>

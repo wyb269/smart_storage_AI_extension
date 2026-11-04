@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.task.SampleItemMapper">
+
+    <resultMap type="com.chinaunicom.smartstorage.admin.entity.task.SampleItem" id="TaskFlowSampleItemMap">
+        <result property="id" column="id" />
+        <result property="sampleNo" column="sample_no" />
+        <result property="taskId" column="task_id" />
+        <result property="grainVariety" column="grain_variety" />
+        <result property="sampleType" column="sample_type" />
+        <result property="remarks" column="remarks" />
+        <result property="addUser" column="add_user" />
+        <result property="addTime" column="add_time" />
+        <result property="updateUser" column="update_user" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+
+    <sql id="Base_Column_List">
+        tfsi.id, tfsi.sample_no, tfsi.task_id, tfsi.grain_variety, tfsi.sample_type, tfsi.remarks, tfsi.add_user, tfsi.add_time, tfsi.update_user, tfsi.update_time
+    </sql>
+
+    <select id="selectByTaskId" resultType="com.chinaunicom.smartstorage.admin.entity.task.SampleItem">
+        select <include refid="Base_Column_List"/>
+        from
+        task_flow_sample_item tfsi
+        <where>
+        task_id = #{taskId}
+        </where>
+    </select>
+
+    <select id="listSampleItemByCondition" resultType="com.chinaunicom.smartstorage.admin.dto.task.sampleItem.SampleItemQueryRespDTO">
+        select tfsi.id as id,
+               tfsi.sample_no as sampleNo,
+               tfsi.grain_variety as grainVariety,
+               tfsi.add_time as addTime,
+               tf.card_no as cardNo,
+               tf.carrier_name as carrierName,
+               tf.license_plate as licensePlate
+        from task_flow_sample_item tfsi
+        left join task_flow tf on tfsi.task_id =tf.id
+        <where>
+            <if test="userId != null and userId != ''">
+                and tfsi.add_user=#{userId}
+            </if>
+            <if test="startTime != null and startTime != ''">
+                and (to_char(tfsi.add_time, 'YYYY-MM-DD') <![CDATA[>=]]> #{startTime})
+            </if>
+            <if test="endTime != null and endTime != ''">
+                and (to_char(tfsi.add_time, 'YYYY-MM-DD') <![CDATA[<=]]> #{endTime})
+            </if>
+        </where>
+        order by tfsi.add_time desc
+    </select>
+    <select id="getSampleItemByTaskId" resultType="com.chinaunicom.smartstorage.admin.entity.task.SampleItem">
+        select <include refid="Base_Column_List"/>
+        from
+        task_flow_sample_item tfsi
+        <where>
+            task_id = #{taskId}
+        </where>
+    </select>
+</mapper>
+

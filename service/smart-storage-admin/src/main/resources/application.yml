@@ -1,0 +1,50 @@
+chinkframe:
+  application:
+    projectDisplay: smart-storage-管理后台
+    projectName: smart-storage-admin
+    projectVersion: v0.0.1
+    projectContextPath: ${server.servlet.context-path}
+server:
+  servlet:
+    context-path: /smart-storage-admin
+  shutdown: graceful
+spring:
+  # AI 视觉类功能共享的独立数据源与权限配置
+  # 使用 optional: 前缀 —— 该文件缺失时应用仍可正常启动，不阻断其余功能。
+  # 独立数据源默认关闭（ai-vision.datasource.enabled=false），
+  # 只有显式配置环境变量后才连接 smart_storage_ai_extension。
+  config:
+    import: optional:classpath:application-ai-vision.yml
+  jmx:
+    default-domain: ${chinkframe.application.projectName}
+  lifecycle:
+    timeout-per-shutdown-phase: 60s
+  main:
+    allow-circular-references: true
+  mvc:
+    pathmatch:
+      matching-strategy: ANT_PATH_MATCHER
+  profiles:
+    active: site
+  threads:
+    virtual:
+      enabled: true
+pagehelper:
+  offset-as-page-num: true
+  pageSizeZero: true
+  params: count=contsql
+  rowBoundsWithCount: true
+  supportMethodsArguments: true
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    aggressive-lazy-loading: false
+    lazy-load-trigger-methods: "doLazyLoadingNow,equals,clone,hashCode,toString"
+    cache-enabled: true
+    jdbc-type-for-null: null
+  global-config:
+    db-config:
+      update-strategy: not_null
+  mapper-locations: classpath*:/mapper/**/*.xml
+  #  config-location: classpath:mybatis-config.xml
+  type-aliases-package: com.chinaunicom.smartstorage.admin.entity.*

@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.task.taskflow.TaskFlowMapper">
+
+    <select id="listTaskFlow"
+            resultType="com.chinaunicom.smartstorage.admin.dto.task.taskflow.TaskFlowRespDTO">
+        select  distinct  -- 去重
+        tf.id,
+        tf.job_no,
+        tf.job_status,
+        sc.name as customerName,
+        tf.carrier_name as carrierName,
+        tf.license_plate,
+        tf.add_time as jobStartTime,
+        tf.job_end_time as jobEndTime,
+        tf.job_type,
+        -- 根据job_type动态计算netWeigh
+        CASE
+        WHEN tf.job_type = 1 THEN (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) - (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)
+        WHEN tf.job_type = 2 THEN (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2) - (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1)
+        ELSE 0  -- 其他类型默认0（可根据业务调整）
+        END as netWeigh,
+        -- 定义皮重/毛重的子查询
+        (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)  as tareWeigh,
+        (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) as grossWeight,
+        (select label from base_dict_data where type = 'STORAGE_WAREHOUSE_NUMBER' and description = CAST(tfqi.warehouse_id AS VARCHAR)) as warehouse
+        from task_flow tf
+        left join sts_customer sc on tf.customer_id = sc.id
+        left join task_flow_quality_item tfqi on tf.id = tfqi.task_id
+        <where>
+            <if test="jobNo != null and jobNo != ''">
+                tf.job_no = #{jobNo}
+            </if>
+            <if test="jobStatus != null">
+                and tf.job_status = #{jobStatus}
+            </if>
+            <if test="carrierName != null and carrierName != ''">
+                and tf.carrier_name like CONCAT('%', #{carrierName}, '%')
+            </if>
+            <if test="customerName != null and customerName != ''">
+                and sc.name like CONCAT('%', #{customerName}, '%')
+            </if>
+            <if test="startTime != null">
+                and tf.add_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                and tf.add_time &lt;= #{endTime}
+            </if>
+         and tf.job_type = 1
+        </where>
+        order by tf.add_time desc
+    </select>
+    <select id="statistics"
+            resultType="com.chinaunicom.smartstorage.admin.dto.task.taskflow.TaskFlowStatisticsRespDTO">
+        SELECT
+            COUNT(CASE WHEN job_status = 'logIn' THEN 1 END) AS logIn,
+            COUNT(CASE WHEN job_status = 'sampled' THEN 1 END) AS sampled,
+            COUNT(CASE WHEN job_status = 'inspected' THEN 1 END) AS inspected,
+            COUNT(CASE WHEN job_status = 'weighed' THEN 1 END) AS weighed,
+            COUNT(CASE WHEN job_status = 'warehoused' THEN 1 END) AS warehoused,
+            COUNT(CASE WHEN job_status = 'tareWeighed' THEN 1 END) AS tareWeighed,
+            COUNT(CASE WHEN job_status = 'pendCard' THEN 1 END) + COUNT(CASE WHEN job_status = 'settled' THEN 1 END) AS pendCard
+        FROM
+            task_flow
+        where   job_type = 1
+--         WHERE
+--             DATE(add_time) = CURRENT_DATE
+    </select>
+
+
+    <select id="listTaskFlowOut"
+            resultType="com.chinaunicom.smartstorage.admin.dto.task.taskflow.TaskFlowRespDTO">
+        select  distinct  -- 去重
+        tf.id,
+        tf.job_no,
+        tf.job_status,
+        sc.name as customerName,
+        tf.carrier_name as carrierName,
+        tf.license_plate,
+        tf.add_time as jobStartTime,
+        tf.job_end_time as jobEndTime,
+        tf.job_type,
+        -- 根据job_type动态计算netWeigh
+        CASE
+        WHEN tf.job_type = 1 THEN (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) - (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)
+        WHEN tf.job_type = 2 THEN (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) - (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)
+        ELSE 0  -- 其他类型默认0（可根据业务调整）
+        END as netWeigh,
+        -- 定义皮重/毛重的子查询
+        (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)  as tareWeigh,
+        (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) as grossWeight,
+        (select label from base_dict_data where type = 'STORAGE_WAREHOUSE_NUMBER' and description = CAST(tfqi.warehouse_id AS VARCHAR)) as warehouse
+        from task_flow tf
+        left join sts_customer sc on tf.customer_id = sc.id
+        left join task_flow_quality_item tfqi on tf.id = tfqi.task_id
+        <where>
+            <if test="jobNo != null and jobNo != ''">
+                tf.job_no = #{jobNo}
+            </if>
+            <if test="jobStatus != null">
+                and tf.job_status = #{jobStatus}
+            </if>
+            <if test="carrierName != null and carrierName != ''">
+                and tf.carrier_name like CONCAT('%', #{carrierName}, '%')
+            </if>
+            <if test="customerName != null and customerName != ''">
+                and sc.name like CONCAT('%', #{customerName}, '%')
+            </if>
+            <if test="startTime != null">
+                and tf.add_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                and tf.add_time &lt;= #{endTime}
+            </if>
+            and tf.job_type = 2
+        </where>
+        order by tf.add_time desc
+    </select>
+
+    <select id="statisticsOut"
+            resultType="com.chinaunicom.smartstorage.admin.dto.task.taskflow.TaskFlowStatisticsOutRespDTO">
+        SELECT
+            COUNT(CASE WHEN job_status = 'logIn' THEN 1 END) AS logIn,
+--             COUNT(CASE WHEN job_status = 'sampled' THEN 1 END) AS sampled,
+--             COUNT(CASE WHEN job_status = 'inspected' THEN 1 END) AS inspected,
+            COUNT(CASE WHEN job_status = 'weighed' THEN 1 END) AS weighed,
+            COUNT(CASE WHEN job_status = 'warehoused' THEN 1 END) AS warehoused,
+            COUNT(CASE WHEN job_status = 'tareWeighed' THEN 1 END) AS tareWeighed,
+            COUNT(CASE WHEN job_status = 'pendCard' THEN 1 END) + COUNT(CASE WHEN job_status = 'settled' THEN 1 END) AS pendCard
+        FROM
+            task_flow
+           where   job_type = 2
+        --         WHERE
+--             DATE(add_time) = CURRENT_DATE
+    </select>
+
+    <select id="settlementReport"
+            resultType="com.chinaunicom.smartstorage.admin.dto.task.taskflow.SettlementReportRespDTO">
+
+    select tf.id as id,
+           tf.job_no as jobNo,
+           sc.name as customerName,
+           CASE
+                WHEN tf.job_type = 1 THEN (
+                select bdd.label
+                from task_flow_quality_item tfqi
+                left join base_dict_data bdd
+                on bdd.type = 'GRAIN_GRADE'
+                and bdd.description = tfqi.grain_grade::varchar
+                where tfqi.task_id = tf.id
+                )
+                WHEN tf.job_type = 2 THEN (
+                select bdd.label
+                from warehouse_out_order woo
+                left join sts_warehouse sw on woo.warehouse_id = sw.id
+                left join base_dict_data bdd
+                on bdd.type = 'GRAIN_GRADE'
+                and bdd.description = sw.grain_grade::varchar
+                where woo.id = tf.order_id
+                )
+               ELSE ''  -- 其他类型默认0（可根据业务调整）
+               END as grainLevel,
+        CASE
+        WHEN tf.job_type = 1 THEN (
+        select bdd.label
+        from warehouse_in_order wio
+        left join base_dict_data bdd
+        on bdd.type = 'GRAIN_VARIETY'
+        and bdd.description = wio.grain_variety::varchar
+        where wio.id = tf.order_id
+        )
+        WHEN tf.job_type = 2 THEN (
+        select bdd.label
+        from warehouse_out_order woo
+        left join sts_warehouse sw on woo.warehouse_id = sw.id
+        left join base_dict_data bdd
+        on bdd.type = 'GRAIN_VARIETY'
+        and bdd.description = sw.grain_variety::varchar
+        where woo.id = tf.order_id
+        )
+        ELSE ''
+        END as grainVariety,
+           CASE
+               WHEN tf.job_type = 1 THEN (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) - (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)
+               WHEN tf.job_type = 2 THEN (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) - (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)
+               ELSE 0  -- 其他类型默认0（可根据业务调整）
+               END as netWeight,
+           -- 定义皮重/毛重的子查询
+           (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)  as tareWeight,
+           (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) as grossWeight,
+        CASE WHEN tf.job_type = 1 THEN '入库' WHEN tf.job_type = 2 THEN '出库' ELSE '其他' END as jobType,
+           tfbi.balance_weight as settleWeight,
+           tfbi.balance_price as settleUnitPrice,
+           tfbi.balance_amount as settleAmount,
+           tfbi.add_time as settleTime
+    from task_flow tf
+             left join sts_customer sc on tf.customer_id = sc.id
+             left join task_flow_quality_item tfqi on tf.id = tfqi.task_id
+             left join task_flow_balance_item tfbi on tf.id = tfbi.task_id
+    <where>
+        EXISTS (
+        SELECT 1
+        FROM task_flow_balance_item tfbi2
+        WHERE tfbi2.task_id = tf.id
+        )
+        <if test = "customerName != null and customerName != ''">
+        and sc.name like concat ('%',#{customerName},'%')
+        </if>
+        <if test = "grainVariety != null and grainVariety != ''">
+            and(
+            (tf.job_type = 1 and exists (
+            select 1 from warehouse_in_order wio
+            where wio.id = tf.order_id
+            and wio.grain_variety = #{grainVariety}
+            ))
+            or
+            (tf.job_type = 2 and exists (
+            select 1 from warehouse_out_order woo
+            left join sts_warehouse sw on woo.warehouse_id = sw.id
+            where woo.id = tf.order_id
+            and sw.grain_variety = #{grainVariety}
+            ))
+            )
+        </if>
+        <if test="settleTimeStart != null">
+            and tfbi.add_time &gt;= #{settleTimeStart}
+        </if>
+        <if test="settleTimeEnd != null">
+        and tfbi.add_time &lt;= #{settleTimeEnd}
+        </if>
+        <if test="jobType != null">
+        and tf.job_type = #{jobType}
+        </if>
+    </where>
+    order by tfbi.add_time desc
+    </select>
+
+    <select id="settlementReportQuery"
+            resultType="com.chinaunicom.smartstorage.admin.dto.task.taskflow.SettlementReportQueryRespDTO">
+        select tf.id as id,
+               tf.job_no as jobNo,
+               sc.name as customerName,
+               CASE
+                   WHEN tf.job_type = 1 THEN (select bdd.label
+                   from task_flow_quality_item tfqi
+                   left join base_dict_data bdd
+                   on bdd.type = 'GRAIN_GRADE'
+                   and bdd.description = tfqi.grain_grade::varchar
+                   where tfqi.task_id = tf.id)
+
+                   WHEN tf.job_type = 2 THEN (select bdd.label
+                   from warehouse_out_order woo
+                   left join sts_warehouse sw on woo.warehouse_id = sw.id
+                   left join base_dict_data bdd
+                   on bdd.type = 'GRAIN_GRADE'
+                   and bdd.description = sw.grain_grade::varchar
+                   where woo.id = tf.order_id)
+                   ELSE ''  -- 其他类型默认0（可根据业务调整）
+                   END as grainLevel,
+               CASE
+    WHEN tf.job_type = 1 THEN (
+        select bdd.label
+        from warehouse_in_order wio
+        left join base_dict_data bdd
+            on bdd.type = 'GRAIN_VARIETY'
+            and bdd.description = wio.grain_variety::varchar
+        where wio.id = tf.order_id
+    )
+    WHEN tf.job_type = 2 THEN (
+        select bdd.label
+        from warehouse_out_order woo
+        left join sts_warehouse sw on woo.warehouse_id = sw.id
+        left join base_dict_data bdd
+            on bdd.type = 'GRAIN_VARIETY'
+            and bdd.description = sw.grain_variety::varchar
+        where woo.id = tf.order_id
+    )
+    ELSE ''
+        END as grainVariety,
+               CASE
+                   WHEN tf.job_type = 1 THEN (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) - (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)
+                   WHEN tf.job_type = 2 THEN (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) - (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)
+                   ELSE 0  -- 其他类型默认0（可根据业务调整）
+                   END as netWeight,
+               -- 定义皮重/毛重的子查询
+               (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)  as tareWeight,
+               (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) as grossWeight,
+               CASE WHEN tf.job_type = 1 THEN '入库' WHEN tf.job_type = 2 THEN '出库' ELSE '其他' END as jobType,
+               tfbi.balance_weight as settleWeight,
+               tfbi.balance_price as settleUnitPrice,
+               tfbi.balance_amount as settleAmount,
+               tf.carrier_name as carrier,
+               tfbi.pre_deduct_weight as deductionPerKg,
+               tfbi.scene_deduct_weight as onSiteDeduction,
+               tfbi.price as standardUnitPrice,
+               tfbi.pre_deduct_weight as deductionPricePerKg,
+               tfbi.deduct_weight_total as totalDeductionWeight,
+               tfbi.id_card as accountIdCard,
+               tfbi.link_phone as accountPhone,
+               tfbi.bank_name as bankName,
+               tfbi.bank_code as bankCode,
+               tfbi.bank_account as bankAccount,
+               tfbi.add_time as settleTime
+        from task_flow tf
+                 left join sts_customer sc on tf.customer_id = sc.id
+                 left join task_flow_quality_item tfqi on tf.id = tfqi.task_id
+                 left join task_flow_balance_item tfbi on tf.id = tfbi.task_id
+        where tf.id = #{id}
+    </select>
+
+    <select id="registrationReport"
+            resultType="com.chinaunicom.smartstorage.admin.dto.task.taskflow.RegistrationReportRespDTO">
+        select tf.id as id,
+        tf.job_no as jobNo,
+        sc.name as customerName,
+        CASE
+        WHEN tf.job_type = 1 THEN (
+        select bdd.label
+        from warehouse_in_order wio
+        left join base_dict_data bdd
+        on bdd.type = 'GRAIN_VARIETY'
+        and bdd.description = wio.grain_variety::varchar
+        where wio.id = tf.order_id
+        )
+        WHEN tf.job_type = 2 THEN (
+        select bdd.label
+        from warehouse_out_order woo
+        left join sts_warehouse sw on woo.warehouse_id = sw.id
+        left join base_dict_data bdd
+        on bdd.type = 'GRAIN_VARIETY'
+        and bdd.description = sw.grain_variety::varchar
+        where woo.id = tf.order_id
+        )
+        ELSE ''
+        END as grainVariety,
+        CASE
+        WHEN tf.job_type = 1 THEN (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) - (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)
+        WHEN tf.job_type = 2 THEN (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) - (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2)
+        ELSE 0
+        END as netWeight,
+        (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 2) as tareWeight,
+        (select weight from task_flow_weight_item where task_id = tf.id and weight_type = 1) as grossWeight,
+        CASE WHEN tf.job_type = 1 THEN '入库' WHEN tf.job_type = 2 THEN '出库' ELSE '其他' END as jobType,
+        tfbi.balance_weight as settleWeight,
+        tf.job_end_time as endTime,
+        tf.carrier_name as carrier,
+        CASE
+        WHEN tf.job_type = 1 THEN
+        CASE tf.job_status
+        WHEN 'logIn' THEN '待扦样'
+        WHEN 'sampled' THEN '待质检'
+        WHEN 'inspected' THEN '待称重'
+        WHEN 'weighed' THEN '待值仓'
+        WHEN 'warehoused' THEN '待称皮'
+        WHEN 'tareWeighed' THEN '待结算'
+        WHEN 'pendCard' THEN '待出门销卡'
+        WHEN 'settled' THEN '待出门销卡'
+        WHEN 'logout' THEN '已完成'
+        ELSE ''
+        END
+        WHEN tf.job_type = 2 THEN
+        CASE tf.job_status
+        WHEN 'logIn' THEN '待称皮'
+        WHEN 'weighed' THEN '待结算'
+        WHEN 'warehoused' THEN '待称重'
+        WHEN 'tareWeighed' THEN '待值仓'
+        WHEN 'pendCard' THEN '待出门销卡'
+        WHEN 'settled' THEN '待出门销卡'
+        WHEN 'logout' THEN '已完成'
+        ELSE ''
+        END
+        ELSE ''
+        END as jobStatus,
+        tf.license_plate as carNo,
+        tfbi.deduct_weight_total as deductWeightTotal,
+        CASE
+        WHEN tf.job_type = 1 THEN (select sw.warehouse_name from task_flow_quality_item woo
+        left join sts_warehouse sw on woo.warehouse_id = sw.id where woo.task_id = tf.id)
+        WHEN tf.job_type = 2 THEN (select sw.warehouse_name from warehouse_out_order woo
+        left join sts_warehouse sw on woo.warehouse_id = sw.id where woo.id = tf.order_id)
+        ELSE ''
+        END as warehouseName
+        from task_flow tf
+        left join sts_customer sc on tf.customer_id = sc.id
+        left join task_flow_quality_item tfqi on tf.id = tfqi.task_id
+        left join task_flow_balance_item tfbi on tf.id = tfbi.task_id
+        <where>
+            <if test="grainVariety != null and grainVariety != ''">
+                (
+                (tf.job_type = 1 and exists (
+                select 1 from warehouse_in_order wio
+                where wio.id = tf.order_id
+                and wio.grain_variety = #{grainVariety}
+                ))
+                or
+                (tf.job_type = 2 and exists (
+                select 1 from warehouse_out_order woo
+                left join sts_warehouse sw on woo.warehouse_id = sw.id
+                where woo.id = tf.order_id
+                and sw.grain_variety = #{grainVariety}
+                ))
+                )
+            </if>
+
+            <if test="jobType != null">
+                and tf.job_type = #{jobType}
+            </if>
+
+            <if test="jobNo != null and jobNo != ''">
+                and tf.job_no = #{jobNo}
+            </if>
+
+            <if test="customerName != null and customerName != ''">
+                and sc.name like concat ('%',#{customerName},'%')
+            </if>
+
+            <if test="granary != null and granary != ''">
+             AND EXISTS (
+                SELECT 1
+                FROM sts_warehouse sw
+                WHERE sw.id = #{granary}
+                AND (
+                (tf.job_type = 1 AND EXISTS (
+                SELECT 1
+                FROM task_flow_quality_item tqi
+                WHERE tqi.task_id = tf.id
+                AND tqi.warehouse_id = sw.id
+                ))
+                OR
+                (tf.job_type = 2 AND EXISTS (
+                SELECT 1
+                FROM warehouse_out_order woo
+                WHERE woo.id = tf.order_id
+                AND woo.warehouse_id = sw.id
+                ))
+                )
+                )
+            </if>
+
+            <if test="jobStatus != null">
+                and tf.job_status = #{jobStatus}
+            </if>
+
+            <if test="carrier != null and carrier != ''">
+                and tf.carrier_name like concat ('%',#{carrier},'%')
+            </if>
+        </where>
+        order by tf.add_time desc
+    </select>
+</mapper>

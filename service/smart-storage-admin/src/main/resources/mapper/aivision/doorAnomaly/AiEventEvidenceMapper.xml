@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  事件证据 Mapper
+
+  依据 AI_HANDOFF.md：
+  - 第17.4节：原始资源与算法标注资源必须分离展示
+  - 第26.2节：本层只返回对象存储键，短时地址由 MediaGateway 签发
+  - 第29.3节：返回受控引用，不返回任意 URL
+-->
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aivision.doorAnomaly.AiEventEvidenceMapper">
+
+    <!--
+      查询事件证据。
+
+      注意：返回的是 object_key 等受控引用，
+      Service 层再经 MediaGateway 换成短时地址后返回前端。
+      这样可以确保任何情况下都不会把内部存储路径直接暴露给前端。
+    -->
+    <select id="listEvidenceByEventId"
+            resultType="com.chinaunicom.smartstorage.admin.dto.doorAnomaly.EventEvidenceRespDTO">
+        SELECT id                    AS evidenceId,
+               event_id              AS eventId,
+               evidence_type         AS evidenceType,
+               object_key            AS originalUrl,
+               annotated_object_key  AS annotatedUrl,
+               thumbnail_object_key  AS thumbnailUrl,
+               to_char(captured_at, 'YYYY-MM-DD HH24:MI:SS') AS capturedAt,               camera_code           AS cameraCode,
+               content_hash          AS contentHash,
+               sort_no               AS sortNo
+        FROM ai_event_evidence
+        WHERE event_id = #{eventId}
+        ORDER BY sort_no ASC
+    </select>
+
+</mapper>

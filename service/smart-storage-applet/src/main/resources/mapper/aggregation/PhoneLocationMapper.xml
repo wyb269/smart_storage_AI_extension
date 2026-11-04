@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.applet.mapper.aggregation.PhoneLocationMapper">
+    <resultMap id="PhoneLocationMap" type="com.chinaunicom.smartstorage.applet.entity.aggregation.PhoneLocation">
+        <id column="perfix" property="perfix"/>
+        <result column="isp" property="isp"/>
+        <result column="province" property="province"/>
+        <result column="city" property="city"/>
+        <result column="city_code" property="cityCode"/>
+        <result column="post_code" property="postCode"/>
+    </resultMap>
+    <sql id="base_sql">
+        bpl.perfix,
+        bpl.isp,
+        bpl.province,
+        bpl.city,
+        bpl.city_code,
+        bpl.post_code
+    </sql>
+
+    <select id="getPhoneLocation" resultMap="PhoneLocationMap">
+        select
+        <include refid="base_sql">
+        </include>
+        from base_phone_location bpl
+        where bpl.perfix = #{phonePrefix}
+    </select>
+    <select id="listPhoneLocationByCondition" resultMap="PhoneLocationMap">
+        select
+        <include refid="base_sql">
+        </include>
+        from base_phone_location bpl
+    </select>
+</mapper>

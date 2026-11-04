@@ -1,0 +1,15 @@
+package com.chinaunicom.smartstorage.applet.dto.sso;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+
+/**
+ * @author liuchink
+ * @since 2024/02/01 13:08
+ */
+@Data
+public class LogoutReqDTO {
+    @Schema(description = "refreshToken", nullable = true, example = "12345")
+    // @JSONField(name = "refresh_token")
+    private String refreshToken;
+}

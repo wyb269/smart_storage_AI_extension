@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.sso.LoginLogMapper">
+    <resultMap id="LoginLogMap" type="com.chinaunicom.smartstorage.admin.entity.rbac.user.LoginLog">
+        <id column="id" property="id"/>
+        <result column="log_name" property="logName"/>
+        <result column="user_id" property="userId"/>
+        <result column="login_id" property="loginId"/>
+        <result column="name" property="name"/>
+        <result column="org_id" property="orgId"/>
+        <result column="org_name" property="orgName"/>
+        <result column="region_id" property="regionId"/>
+        <result column="region_name" property="regionName"/>
+        <result column="role_group_id" property="roleGroupId"/>
+        <result column="role_group_name" property="roleGroupName"/>
+        <result column="add_time" property="addTime"/>
+        <result column="message" property="message"/>
+        <result column="ip" property="ip"/>
+    </resultMap>
+    <sql id="base_sql">
+        bll.id,
+        bll.log_name,
+        bll.user_id,
+        bll.login_id,
+        bll.name,
+        bll.org_id,
+        bll.region_id,
+        bll.role_group_id,
+        bll.add_time,
+        bll.message,
+        bll.ip,
+        bll.login_state,
+        bll.state_message
+    </sql>
+
+    <select id="listLoginLogByConditionOnPage" resultMap="LoginLogMap">
+        select
+        <include refid="base_sql">
+        </include>,
+                      boi.name as org_name,
+                      bri.name as region_name,
+                      brg.name as role_group_name
+    from base_user_login_log bll
+             left join base_organization_info boi on bll.org_id = boi.id
+             left join base_region_info bri on bll.region_id = bri.id
+             left join base_role_group brg on bll.role_group_id = brg.id
+        <where>
+            <if test="loginId != null and loginId != ''">
+                bll.login_id = #{loginId}
+            </if>
+            <if test="name != null and name != ''">
+                and bll.name like concat('%', #{name}, '%')
+            </if>
+            <if test="startTime != null and startTime != ''">
+                and bll.add_time <![CDATA[>=]]> #{startTime}
+            </if>
+            <if test="endTime != null and endTime != ''">
+                and bll.add_time <![CDATA[<=]]> #{endTime}
+            </if>
+        </where>
+        order by bll.add_time desc, bll.id desc
+    </select>
+</mapper>

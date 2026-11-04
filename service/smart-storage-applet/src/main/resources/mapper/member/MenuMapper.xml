@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.applet.mapper.member.MenuMapper">
+    <resultMap id="MenuMap" type="com.chinaunicom.smartstorage.applet.entity.member.Menu">
+        <id column="id" property="id"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="name" property="name"/>
+        <result column="open_url" property="openUrl"/>
+        <result column="icon" property="icon"/>
+        <result column="is_frame" property="isFrame"/>
+        <result column="order_num" property="orderNum"/>
+        <result column="is_display" property="isDisplay"/>
+        <result column="type" property="type"/>
+    </resultMap>
+    <sql id="base_sql">
+        bmi.id,
+        bmi.parent_id,
+        bmi.name,
+        bmi.open_url,
+        bmi.icon,
+        bmi.is_frame,
+        bmi.order_num,
+        bmi.is_display,
+        bmi.type
+    </sql>
+
+    <select id="listMenuByType" resultMap="MenuMap">
+        select
+        <include refid="base_sql">
+        </include>
+        from base_menu_info bmi where bmi.type = #{type}
+        order by bmi.order_num desc, bmi.id desc
+    </select>
+
+</mapper>

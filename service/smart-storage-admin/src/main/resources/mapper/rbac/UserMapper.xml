@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.rbac.UserMapper">
+    <resultMap id="UserMap" type="com.chinaunicom.smartstorage.admin.entity.rbac.user.User">
+        <id column="id" property="id"/>
+        <result column="org_id" property="orgId"/>
+        <result column="role_group_id" property="roleGroupId"/>
+        <result column="region_id" property="regionId"/>
+        <result column="login_id" property="loginId"/>
+        <result column="login_pwd" property="loginPwd"/>
+        <result column="name" property="name"/>
+        <result column="phone" property="phone"/>
+        <result column="show_state" property="showState"/>
+        <result column="add_user" property="addUser"/>
+        <result column="add_time" property="addTime"/>
+        <result column="user_type" property="userType"/>
+        <result column="update_user" property="updateUser"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="head_url" property="headUrl"/>
+        <result column="last_login_time" property="lastLoginTime"/>
+        <result column="last_update_pwd" property="lastUpdatePwd"/>
+        <result column="must_update_pwd" property="mustUpdatePwd"/>
+        <result column="employed_status" property="employedStatus"/>
+        <association property="organization"
+                     javaType="com.chinaunicom.smartstorage.admin.entity.rbac.Organization">
+            <id column="organi_id" property="id"/>
+            <result column="organi_parent_id" property="parentId"/>
+            <result column="organi_name" property="name"/>
+            <result column="organi_levels" property="levels"/>
+            <result column="organi_type" property="type"/>
+        </association>
+        <association property="region" javaType="com.chinaunicom.smartstorage.admin.entity.rbac.Region">
+            <id column="reg_id" property="id"/>
+            <result column="reg_parent_id" property="parentId"/>
+            <result column="reg_name" property="name"/>
+            <result column="reg_code" property="code"/>
+            <result column="reg_levels" property="levels"/>
+            <result column="reg_full_name" property="fullName"/>
+            <result column="reg_full_id" property="fullId"/>
+        </association>
+        <association property="roleGroup" javaType="com.chinaunicom.smartstorage.admin.entity.rbac.role.RoleGroup">
+            <id column="rol_group_id" property="id"/>
+            <result column="rol_group_name" property="name"/>
+            <result column="rol_group_remark" property="remark"/>
+            <result column="rol_add_user" property="addUser"/>
+            <result column="rol_add_time" property="addTime"/>
+            <collection property="listRole" ofType="com.chinaunicom.smartstorage.admin.entity.rbac.role.Role">
+                <id column="rol_id" property="id"/>
+                <result column="rol_name" property="name"/>
+                <collection property="listMenu" ofType="com.chinaunicom.smartstorage.admin.entity.rbac.menu.Menu">
+                    <id column="rol_menu_id" property="id"/>
+                    <result column="rol_menu_parent_id" property="parentId"/>
+                    <result column="rol_menu_name" property="name"/>
+                    <result column="rol_menu_open_url" property="openUrl"/>
+                    <result column="rol_menu_icon" property="icon"/>
+                    <result column="rol_menu_is_frame" property="isFrame"/>
+                    <result column="rol_menu_order_num" property="orderNum"/>
+                    <result column="rol_menu_is_display" property="isDisplay"/>
+                    <collection property="listRights" ofType="com.chinaunicom.smartstorage.admin.entity.rbac.Rights">
+                        <id column="role_menu_rights_id" property="id"/>
+                        <result column="role_menu_rights_name" property="name"/>
+                    </collection>
+                </collection>
+            </collection>
+        </association>
+
+    </resultMap>
+    <sql id="base_sql">
+        bui.id,
+        bui.org_id,
+        bui.region_id,
+        bui.role_group_id,
+        bui.login_id,
+        bui.login_pwd,
+        bui.name,
+        bui.phone,
+        bui.head_url,
+        bui.show_state,
+        bui.add_user,
+        bui.add_time,
+        bui.user_type,
+        bui.update_user,
+        bui.update_time,
+        bui.last_login_time,
+        bui.last_update_pwd,
+        bui.head_url,
+        bui.employed_status,
+        bui.must_update_pwd
+    </sql>
+    <select id="login" resultMap="UserMap">
+        select <include refid="base_sql">
+    </include>,
+                  bmi1.id          as organi_id,
+                  bmi1.name        as organi_name,
+                  bri.id           as rol_id,
+                  bri.name         as rol_name,
+                  bmi.id           as rol_menu_id,
+                  bmi.parent_id    as rol_menu_parent_id,
+                  bmi.name         as rol_menu_name,
+                  bmi.open_url     as rol_menu_open_url,
+                  bmi.is_frame     as rol_menu_is_frame,
+                  bmi.order_num    as rol_menu_order_num,
+                  bmi.is_display   as rol_menu_is_display,
+                  region.id        as reg_id,
+                  region.name      as reg_name,
+                  region.full_name as reg_full_name
+    from base_user_info bui
+             left join base_organization_info bmi1
+                       on bui.org_id = bmi1.id
+             left join base_region_info region on region.id = bui.region_id
+             join base_role_group brg on brg.id = bui.role_group_id
+             join base_role_group_link brgl on brgl.group_id = brg.id
+             join base_role_info bri on bri.id = brgl.role_id
+             left join base_role_menu brm on bri.id = brm.role_id
+             left join base_menu_info bmi on brm.menu_id = bmi.id
+    where bui.login_id = #{loginId}
+    </select>
+    <select id="listUserByConditionOnPage" resultMap="UserMap">
+        SELECT <include refid="base_sql">
+    </include>,
+                  bmi.id           as organi_id,
+                  bmi.parent_id    as organi_parent_id,
+                  bmi.name         as organi_name,
+                  bmi.levels       as organi_levels,
+                  brg.id           as rol_group_id,
+                  brg.name         as rol_group_name,
+                  region.id        as reg_id,
+                  region.name      as reg_name,
+                  region.parent_id as reg_parent_id
+    FROM base_user_info bui
+             left join base_role_group brg ON brg.id = bui.role_group_id
+             left join base_organization_info bmi ON bmi.id = bui.org_id
+             left join base_region_info region on region.id = bui.region_id
+        <where>
+            <if test="orgId != null and orgId != '' and orgId != 0">
+                and bui.org_id in (WITH RECURSIVE child_nodes AS (SELECT bmi.id
+                                                                  FROM base_organization_info bmi
+                                                                  WHERE id = #{orgId}
+                                                                  UNION
+                                                                  SELECT bmi2.id
+                                                                  FROM base_organization_info bmi2
+                                                                           JOIN child_nodes pn ON pn.id = bmi2.parent_id)
+                                   SELECT *
+                                   FROM child_nodes)
+            </if>
+            <if test="name != null and name != ''">
+                and bui.name like CONCAT('%', #{name}, '%')
+            </if>
+        </where>
+        ORDER BY bui.add_time DESC, bui.id desc
+    </select>
+    <select id="listUserByOrgId" resultType="java.lang.String">
+        SELECT
+        <include refid="base_sql">
+        </include>
+        FROM base_user_info bui
+        WHERE org_id = #{orgId}
+        order by bui.id desc
+    </select>
+    <select id="getUserByLoginId" resultMap="UserMap">
+        select
+        <include refid="base_sql">
+        </include>
+        from base_user_info bui
+        where login_id = #{loginId}
+    </select>
+
+    <update id="updateUserLoginPassword">
+        update base_user_info
+        set login_pwd       = #{loginPwd},
+            last_update_pwd = #{lastUpdatePwd}
+        <where>
+            <if test="loginId != null and loginId != ''">
+                login_id = #{loginId}
+            </if>
+            <if test="phone != null and phone != ''">
+                and phone = #{phone}
+            </if>
+            <if test="id != null and id != ''">
+                and id = #{id}
+            </if>
+        </where>
+    </update>
+    <select id="loginInfoByLoginId" resultMap="UserMap">
+        select <include refid="base_sql">
+    </include>,
+                  bmi1.id     as organi_id,
+                  bmi1.name   as organi_name,
+                  bmi1.levels as organi_levels,
+                  bmi1.type   as organi_type,
+                  brg.id      as rol_group_id,
+                  brg.name    as rol_group_name,
+                  region.id   as reg_id,
+                  region.name as reg_name
+    from base_user_info bui
+             left join base_organization_info bmi1
+                       on bui.org_id = bmi1.id
+             left join base_region_info region on region.id = bui.region_id
+             left join base_role_group brg on bui.role_group_id = brg.id
+    where bui.login_id = #{loginId}
+    </select>
+    <select id="loginInfoByPhone" resultMap="UserMap">
+        select <include refid="base_sql">
+    </include>,
+                  bmi1.id     as organi_id,
+                  bmi1.name   as organi_name,
+                  bmi1.levels as organi_levels,
+                  bmi1.type   as organi_type,
+                  brg.id      as rol_group_id,
+                  brg.name    as rol_group_name,
+                  region.id   as reg_id,
+                  region.name as reg_name
+    from base_user_info bui
+             left join base_organization_info bmi1
+                       on bui.org_id = bmi1.id
+             left join base_region_info region on region.id = bui.region_id
+             left join base_role_group brg on bui.role_group_id = brg.id
+    where bui.phone = #{phone}
+    </select>
+
+    <select id="getLoginBaseInfo" resultMap="UserMap">
+        select <include refid="base_sql">
+    </include>,
+                  bmi1.id     as organi_id,
+                  bmi1.name   as organi_name,
+                  bmi1.levels as organi_levels,
+                  bmi1.type   as organi_type,
+                  brg.id      as rol_group_id,
+                  brg.name    as rol_group_name,
+                  region.id   as reg_id,
+                  region.name as reg_name
+    from base_user_info bui
+             left join base_organization_info bmi1
+                       on bui.org_id = bmi1.id
+             left join base_region_info region on region.id = bui.region_id
+             left join base_role_group brg on bui.role_group_id = brg.id
+    where bui.id = #{id}
+    </select>
+
+    <select id="getUserByDetail" resultMap="UserMap">
+        select <include refid="base_sql">
+    </include>,
+                  bmi1.id     as organi_id,
+                  bmi1.name   as organi_name,
+                  brg.id      as rol_group_id,
+                  brg.name    as rol_group_name,
+                  region.id   as reg_id,
+                  region.name as reg_name
+    from base_user_info bui
+             left join base_organization_info bmi1
+                       on bui.org_id = bmi1.id
+             left join base_region_info region on region.id = bui.region_id
+             left join base_role_group brg on bui.role_group_id = brg.id
+    where bui.id = #{id}
+    </select>
+</mapper>

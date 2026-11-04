@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.rbac.RoleMapper">
+    <resultMap id="RoleMap" type="com.chinaunicom.smartstorage.admin.entity.rbac.role.Role">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="org_id" property="orgId"/>
+        <result column="region_id" property="regionId"/>
+        <result column="remark" property="remark"/>
+        <result column="add_user" property="addUser"/>
+        <result column="add_time" property="addTime"/>
+        <result column="update_user" property="updateUser"/>
+        <result column="update_time" property="updateTime"/>
+        <association property="organization"
+                     javaType="com.chinaunicom.smartstorage.admin.entity.rbac.Organization">
+            <id column="organi_id" property="id"/>
+            <result column="organi_name" property="name"/>
+        </association>
+        <association property="region" javaType="com.chinaunicom.smartstorage.admin.entity.rbac.Region">
+            <id column="reg_id" property="id"/>
+            <result column="reg_name" property="name"/>
+        </association>
+        <collection property="listMenu" ofType="com.chinaunicom.smartstorage.admin.entity.rbac.menu.Menu">
+            <id column="menu_id" property="id"/>
+            <result column="menu_parent_id" property="parentId"/>
+            <result column="menu_name" property="name"/>
+            <result column="menu_open_url" property="openUrl"/>
+            <result column="menu_icon" property="icon"/>
+            <result column="menu_is_frame" property="isFrame"/>
+            <result column="menu_order_num" property="orderNum"/>
+            <result column="menu_is_display" property="isDisplay"/>
+            <result column="menu_type" property="type"/>
+            <collection property="listRights" ofType="com.chinaunicom.smartstorage.admin.entity.rbac.Rights">
+                <id column="rights_id" property="id"/>
+                <result column="rights_name" property="name"/>
+            </collection>
+        </collection>
+        <collection property="listRoleGroup" ofType="com.chinaunicom.smartstorage.admin.entity.rbac.role.RoleGroup">
+            <id column="group_id" property="id"/>
+            <result column="group_name" property="name"/>
+        </collection>
+    </resultMap>
+    <sql id="base_sql">
+            bri.id,
+            bri.name,
+            bri.org_id,
+            bri.region_id,
+            bri.remark,
+            bri.add_user,
+            bri.add_time,
+            bri.update_user,
+            bri.update_time
+    </sql>
+    <select id="listRoleByConditionOnPage" resultMap="RoleMap">
+        select <include refid="base_sql">
+    </include>,
+                  bmi.id      as organi_id,
+                  bmi.name    as organi_name,
+                  region.id   as reg_id,
+                  region.name as reg_name,
+                  brg.id      as group_id,
+                  brg.name    as group_name
+    from base_role_info bri
+             left join base_organization_info bmi ON bmi.id = bri.org_id
+             left join base_region_info region ON region.id = bri.region_id
+             left join base_role_group_link brgl on brgl.role_id = bri.id
+             left join base_role_group brg on brg.id = brgl.group_id where bri.id in ( select ri.id from (select id
+                                                                                                          from base_role_info bri2
+        <where>
+            <if test="orgId != null and orgId != '' and orgId != 0">
+                and bri.org_id in (WITH RECURSIVE child_nodes AS (SELECT bmi.id
+                                                                  FROM base_organization_info bmi
+                                                                  WHERE id = #{orgId}
+                                                                  UNION
+                                                                  SELECT bmi2.id
+                                                                  FROM base_organization_info bmi2
+                                                                           JOIN child_nodes pn ON pn.id = bmi2.parent_id)
+                                   SELECT *
+                                   FROM child_nodes)
+            </if>
+            <if test="name != null and name != ''">
+                and bri2.name like concat('%', #{name}, '%')
+            </if>
+        </where>
+        group by bri2.id
+        order by bri2.add_time desc, bri2.id desc
+        limit #{pageSize} offset #{pageNo})ri)
+        order by bri.add_time desc, bri.id desc
+    </select>
+    <select id="listRoleByConditionOnPage_COUNT" resultType="java.lang.Long">
+        select count(id)
+        from base_role_info bri2
+        <where>
+            <if test="orgId != null and orgId != '' and orgId != 0">
+                and bri2.org_id in (WITH RECURSIVE child_nodes AS (SELECT bmi.id
+                FROM base_organization_info bmi
+                WHERE id = #{orgId}
+                UNION
+                SELECT bmi2.id
+                FROM base_organization_info bmi2
+                JOIN child_nodes pn ON pn.id = bmi2.parent_id)
+                SELECT *
+                FROM child_nodes)
+            </if>
+            <if test="name != null and name != ''">
+                and bri2.name like concat('%', #{name}, '%')
+            </if>
+        </where>
+    </select>
+    <select id="listRoleByIdForMenu" resultMap="RoleMap">
+        select <include refid="base_sql">
+    </include>,
+                  bmi.id         as menu_id,
+                  bmi.parent_id  as menu_parent_id,
+                  bmi.name       as menu_name,
+                  bmi.open_url   as menu_open_url,
+                  bmi.icon       as menu_icon,
+                  bmi.is_frame   as menu_is_frame,
+                  bmi.order_num  as menu_order_num,
+                  bmi.is_display as menu_is_display,
+                  brin.id        as rights_id,
+                  brin.name      as rights_name,
+                  bmi.type       as menu_type
+    from base_role_info bri
+             left join base_role_menu brm on bri.id = brm.role_id
+             left join base_menu_info bmi on brm.menu_id = bmi.id
+             left join base_menu_rights_link bmrl on bmrl.menu_id = bmi.id and bmrl.role_id = #{id}
+             left join base_rights_info brin on brin.id = bmrl.rights_id
+    where bri.id = #{id}
+    order by bmi.id
+    </select>
+    <insert id="saveRoleMenuLinked">
+        insert into base_role_menu (role_id, menu_id)
+        VALUES
+        <foreach collection="list" item="RoleMenuLinked" index="index" separator=",">
+            (#{RoleMenuLinked.roleId}, #{RoleMenuLinked.menuId})
+        </foreach>
+    </insert>
+    <delete id="deleteRoleMenuLinked">
+        delete
+        from base_role_menu
+        where role_id = #{roleId}
+    </delete>
+
+    <select id="getRoleByDetail" resultMap="RoleMap">
+        select
+        <include refid="base_sql">
+        </include>,
+        boi.id as organi_id,
+        boi.name as organi_name,
+        bregi.id as reg_id,
+        bregi.name as reg_name,
+        brg.id as group_id,
+        brg.name as group_name,
+        bmi.id as menu_id,
+        bmi.name as menu_name,
+        bmi.parent_id as menu_parent_id
+        from base_role_info bri
+        left join base_organization_info boi on boi.id = bri.org_id
+        left join base_region_info bregi on bregi.id = bri.region_id
+        left join base_role_group_link brgl on brgl.role_id = bri.id
+        left join base_role_group brg on brg.id = brgl.group_id
+        left join base_role_menu brm on bri.id = brm.role_id
+        left join base_menu_info bmi on bmi.id = brm.menu_id
+        where bri.id = #{id}
+    </select>
+</mapper>

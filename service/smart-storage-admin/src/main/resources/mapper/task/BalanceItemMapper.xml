@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.task.BalanceItemMapper">
+
+    <select id="listBalanceItemByConditionOnPage" resultType="com.chinaunicom.smartstorage.admin.dto.task.balanceItem.BalanceItemQueryRespDTO">
+    	select a.id,a.balance_no,a.balance_weight,a.balance_price,a.balance_amount,a.add_time,
+			b.license_plate,b.carrier_name,b.job_no,b.job_type,b.card_no
+    	from task_flow_balance_item a
+			left join task_flow b on (a.task_id=b.id)
+		<where>
+			<if test="userId != null and userId != ''">
+				and a.add_user=#{userId}
+			</if>
+			<if test="startTime != null and startTime != ''">
+				and (to_char(a.add_time, 'YYYY-MM-DD') <![CDATA[>=]]> #{startTime})
+			</if>
+			<if test="endTime != null and endTime != ''">
+				and (to_char(a.add_time, 'YYYY-MM-DD') <![CDATA[<=]]> #{endTime})
+			</if>
+		</where>
+		order by a.add_time desc
+    </select>
+
+	<select id="getTaskBalance" resultType="com.chinaunicom.smartstorage.admin.dto.task.balanceItem.TaskBalanceRespDTO">
+		select a.job_no,COALESCE(b.deduction,0) as deduction,COALESCE(b.deduction_price,0) as deduction_price,
+			COALESCE(c.gross_weight,0) as gross_weight,COALESCE(c.tare_weight,0) as tare_weight,COALESCE(c.net_weight,0) as net_weight,
+			COALESCE(d.deduct_weight,0) as deduct_weight,
+		    e.card as id_card,e.phone as link_phone,e.bank_code,e.bank_name,e.bank_account
+		from task_flow a
+			left join task_flow_quality_item b on (a.id=b.task_id)
+			left join (
+				select task_id,sum(gross_weight) as gross_weight,sum(tare_weight) as tare_weight,
+					sum(gross_weight)-sum(tare_weight) as net_weight
+				from
+				(
+					select task_id,case weight_type when 1 then weight end as gross_weight,
+						case weight_type when 2 then weight end as tare_weight
+					from task_flow_weight_item where task_id=#{taskId}
+				) tb group by task_id
+			) c on (a.id=c.task_id)
+			left join task_flow_warehouse_item d on (a.id=d.task_id and d.state=1)
+			left join sts_customer e on (a.customer_id=e.id)
+		where a.id=#{taskId}
+
+	</select>
+
+</mapper>

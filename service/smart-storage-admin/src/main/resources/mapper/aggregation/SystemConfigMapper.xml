@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aggregation.SystemConfigMapper">
+    <resultMap id="SystemConfigMap" type="com.chinaunicom.smartstorage.admin.entity.aggregation.SystemConfig">
+        <result column="syc_group" property="sycGroup"/>
+        <result column="syc_key" property="sycKey"/>
+        <result column="syc_value" property="sycValue"/>
+        <result column="remark" property="remark"/>
+        <result column="need_cache" property="needCache"/>
+        <result column="need_pwd" property="needPwd"/>
+    </resultMap>
+    <sql id="base_sql">
+            bsc.syc_group,
+            bsc.syc_key,
+            bsc.syc_value,
+            bsc.remark,
+            bsc.need_cache,
+            bsc.need_pwd
+    </sql>
+
+    <select id="listSystemConfigByCondition" resultMap="SystemConfigMap">
+        select
+        <include refid="base_sql"/>
+        from base_system_config bsc
+        <where>
+            <if test="sycGroup != null and sycGroup != ''">
+                and bsc.syc_group = #{sycGroup}
+            </if>
+            <if test="sycKey != null and sycKey != ''">
+                and bsc.syc_key = #{sycKey}
+            </if>
+            <if test="sycValue != null and sycValue != ''">
+                and bsc.syc_value = #{sycValue}
+            </if>
+            <if test="remark != null and remark != ''">
+                and bsc.remark like concat('%', #{remark}, '%')
+            </if>
+        </where>
+    </select>
+</mapper>

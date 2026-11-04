@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>smart-storage</artifactId>
+        <groupId>com.chinaunicom.smartstorage</groupId>
+        <version>0.0.1</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>smart-storage-quartz</artifactId>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.baidu.fsg</groupId>
+            <artifactId>uid-generator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.akkinoc.spring.boot</groupId>
+            <artifactId>orika-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.lmax</groupId>
+            <artifactId>disruptor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.liuchink.chinkutils</groupId>
+            <artifactId>chinkUtils-all</artifactId>
+            <exclusions>
+                <exclusion>
+                    <artifactId>log4j-api</artifactId>
+                    <groupId>org.apache.logging.log4j</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.whvcse</groupId>
+            <artifactId>easy-captcha</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.pagehelper</groupId>
+            <artifactId>pagehelper-spring-boot-starter</artifactId>
+        </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>com.baomidou</groupId>-->
+        <!--            <artifactId>dynamic-datasource-spring-boot-starter</artifactId>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.alibaba</groupId>-->
+        <!--            <artifactId>druid-spring-boot-starter</artifactId>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.boot</groupId>-->
+        <!--            <artifactId>spring-boot-starter-amqp</artifactId>-->
+        <!--            <exclusions>-->
+        <!--                <exclusion>-->
+        <!--                    <artifactId>javax.annotation-api</artifactId>-->
+        <!--                    <groupId>javax.annotation</groupId>-->
+        <!--                </exclusion>-->
+        <!--            </exclusions>-->
+        <!--        </dependency>-->
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.idev.excel</groupId>
+            <artifactId>fastexcel</artifactId>
+            <exclusions>
+                <exclusion>
+                    <artifactId>log4j-api</artifactId>
+                    <groupId>org.apache.logging.log4j</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.nashorn</groupId>
+            <artifactId>nashorn-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2-extension</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2-extension-spring6</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.chinaunicom.smartstorage</groupId>
+            <artifactId>smart-storage-common</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.unicom.hlj.snr.natalyas</groupId>
+            <artifactId>natalyas-access-statistics-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.unicom.hlj.snr.celesta</groupId>
+            <artifactId>celesta-license-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.yulichang</groupId>
+            <artifactId>mybatis-plus-join-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.xuxueli</groupId>
+            <artifactId>xxl-job-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+    </dependencies>
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <!-- 允许使用 HTTP 协议连接非 HTTPS 的 Harbor 仓库 -->
+                    <allowInsecureRegistries>true</allowInsecureRegistries>
+                    <containerizingMode>packaged</containerizingMode>
+                    <!-- 指定基础镜像 -->
+                    <from>
+                        <image>127.0.0.1:48143/base-images/bellsoft-liberica-openjdk-debian:21.0.10</image>
+                    </from>
+                    <!-- 指定目标镜像地址和认证信息 -->
+                    <to>
+
+                        <image>127.0.0.1:48143/inhouse-project-zhlc/quartz-service-site:latest</image>
+                        <auth>
+                            <username>admin</username>
+                            <password>${env.SMART_STORAGE_REGISTRY_PASSWORD}</password>
+                        </auth>
+                    </to>
+                    <container>
+                        <!-- 指定应用主类 -->
+                        <mainClass>com.chinaunicom.smartstorage.quartz.WebQuartzApplication</mainClass>
+                        <environment>
+                            <TZ>Asia/Shanghai</TZ>
+                        </environment>
+                        <!-- 设置JVM参数 -->
+                        <jvmFlags>
+                            <jvmFlag>--add-opens=java.base/java.lang=ALL-UNNAMED</jvmFlag>
+                            <jvmFlag>-Xms1024m</jvmFlag>
+                            <jvmFlag>-Xmx1024m</jvmFlag>
+                            <jvmFlag>-Dspring.profiles.active=site</jvmFlag>
+                        </jvmFlags>
+                    </container>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>repackage</id>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <mainClass>com.chinaunicom.smartstorage.quartz.WebQuartzApplication</mainClass>
+                    <jvmArguments>-Dfile.encoding=utf-8</jvmArguments>
+                    <includeSystemScope>true</includeSystemScope>
+                    <!--                    <layout>ZIP</layout>-->
+                    <!--                    <arguments>-->
+                    <!--                        <argument>${project.basedir}\lib</argument>-->
+                    <!--                    </arguments>-->
+                    <!--                    <includes>-->
+                    <!--                        <include>-->
+                    <!--                            <groupId>non-exists</groupId>-->
+                    <!--                            <artifactId>non-exists</artifactId>-->
+                    <!--                        </include>-->
+                    <!--                    </includes>-->
+                </configuration>
+            </plugin>
+            <!--            <plugin>-->
+            <!--                <groupId>org.apache.maven.plugins</groupId>-->
+            <!--                <artifactId>maven-dependency-plugin</artifactId>-->
+            <!--                <version>3.1.1</version>-->
+            <!--                <executions>-->
+            <!--                    <execution>-->
+            <!--                        <id>copy-dependencies</id>-->
+            <!--                        <phase>package</phase>-->
+            <!--                        &lt;!&ndash;关联指定生命周期的目标&ndash;&gt;-->
+            <!--                        <goals>-->
+            <!--                            <goal>copy-dependencies</goal>-->
+            <!--                        </goals>-->
+            <!--                        <configuration>-->
+            <!--                            &lt;!&ndash;将依赖拷贝到项目构建目录的lib下&ndash;&gt;-->
+            <!--                            <outputDirectory>${project.build.directory}/lib</outputDirectory>-->
+            <!--                            &lt;!&ndash;是否排除传递性&ndash;&gt;-->
+            <!--                            <excludeTransitive>false</excludeTransitive>-->
+            <!--                            &lt;!&ndash;是否去掉jar包版本信息&ndash;&gt;-->
+            <!--                            <stripVersion>false</stripVersion>-->
+            <!--                            &lt;!&ndash;包含范围：拷贝运行时的依赖，例如测试的就不需要了&ndash;&gt;-->
+            <!--                            <includeScope>runtime</includeScope>-->
+            <!--                        </configuration>-->
+            <!--                    </execution>-->
+            <!--                    <execution>-->
+            <!--                        <id>copy-dependencies1</id>-->
+            <!--                        <phase>package</phase>-->
+            <!--                        &lt;!&ndash;关联指定生命周期的目标&ndash;&gt;-->
+            <!--                        <goals>-->
+            <!--                            <goal>copy-dependencies</goal>-->
+            <!--                        </goals>-->
+            <!--                        <configuration>-->
+            <!--                            &lt;!&ndash;将依赖拷贝到项目构建目录的lib下&ndash;&gt;-->
+            <!--                            <outputDirectory>${project.build.directory}/lib</outputDirectory>-->
+            <!--                            &lt;!&ndash;是否排除传递性&ndash;&gt;-->
+            <!--                            <excludeTransitive>false</excludeTransitive>-->
+            <!--                            &lt;!&ndash;是否去掉jar包版本信息&ndash;&gt;-->
+            <!--                            <stripVersion>false</stripVersion>-->
+            <!--                            &lt;!&ndash;包含范围：拷贝运行时的依赖，例如测试的就不需要了&ndash;&gt;-->
+            <!--                            <includeScope>compile</includeScope>-->
+            <!--                        </configuration>-->
+            <!--                    </execution>-->
+            <!--                </executions>-->
+            <!--            </plugin>-->
+        </plugins>
+    </build>
+
+</project>

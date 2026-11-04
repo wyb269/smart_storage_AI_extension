@@ -1,0 +1,80 @@
+chinkframe:
+  chinkOkHttp:
+    proxy:
+      hostname: 129.168.0.1
+      port: 9090
+  upload:
+    context:
+      path: res
+    path:
+      disk: ${spring.servlet.multipart.location}
+logging:
+  config: classpath:logback-uat.xml
+server:
+  #  address: 0.0.0.0
+  port: 42000
+  tomcat:
+    uri-encoding: UTF-8
+    threads:
+      max: 1000
+      min-spare: 50
+    accept-count: 1000
+    max-connections: 8192
+    connection-timeout: 10s
+    keep-alive-timeout: 60s
+spring:
+  aop:
+    proxy-target-class: true
+  datasource:
+    password: "${SMART_STORAGE_ADMIN_APPLICATION_UAT_PASSWORD_1:}"
+    type: com.zaxxer.hikari.HikariDataSource
+    url: "jdbc:postgresql://127.0.0.1:48129/smart-storage-site?currentSchema=public&serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding\
+      =utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true&rewriteBatchedStatem\
+      ents=true&useSSL=false"
+    username: zhlc
+    hikari:
+      maximum-pool-size: 35
+      minimum-idle: 25
+      max-lifetime: 1200000
+      keepalive-time: 60000
+      connection-timeout: 20000
+      idle-timeout: 300000
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        useServerPrepStmts: true
+        rewriteBatchedStatements: true
+      connection-test-query: SELECT 1
+      leak-detection-threshold: 60000
+  redis:
+    redisson:
+      file: classpath:redisson-uat.yml
+  #  rabbitmq:
+  #    host: 127.0.0.1
+  #    password: admin
+  #    port: 50001
+  #    username: admin
+  #    virtual-host: vhost_chinkframe_dev
+  servlet:
+    multipart:
+      location: D:\develop\${chinkframe.upload.context.path}\
+      max-file-size: 500MB
+      max-request-size: 500MB
+knife4j:
+  enable: false
+  setting:
+    language: zh_cn
+    enable-footer: true
+    enable-footer-custom: true
+    footer-custom-content: ${chinkframe.application.projectName} ${chinkframe.application.projectVersion}
+  basic:
+    enable: false
+    username: admin
+    password: "${SMART_STORAGE_ADMIN_APPLICATION_UAT_PASSWORD_2:}"
+  production: false
+rust:
+  endpoint: http://127.0.0.1:48131
+  access-key: "${SMART_STORAGE_ADMIN_APPLICATION_UAT_ACCESS_KEY_1:}"
+  secret-key: "${SMART_STORAGE_ADMIN_APPLICATION_UAT_SECRET_KEY_1:}"
+  bucket-name: smart-storage-site

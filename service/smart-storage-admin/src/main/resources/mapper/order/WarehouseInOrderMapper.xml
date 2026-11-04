@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.order.WarehouseInOrderMapper">
+
+
+
+    <!--查询单个-->
+    <select id="getWarehouseInOrderById" resultType="com.chinaunicom.smartstorage.admin.dto.order.WarehouseInOrderRespDTO">
+        select
+            a.id,
+            b.name,
+            b.phone,
+            (select label from base_dict_data where type = 'GRAIN_VARIETY' and description = a.grain_variety) as grainVariety,
+            (select label from base_dict_data where type = 'GRAIN_SOURCE_TYPE' and description = CAST(a.grain_source_type AS VARCHAR)) as grainSourceType,
+            a.plan_weight as planWeight,
+            a.completed_weight as completedWeight,
+            a.state,
+            a.start_time as startTime,
+            a.end_time as endTime,
+            a.remarks,
+            c.name as addUser,
+            a.add_time as addTime
+        from warehouse_in_order a
+        left join sts_customer b on b.id = a.customer_id
+        left join base_user_info c on c.id = a.add_user
+        where a.id = #{id}
+    </select>
+
+    <!--列表-->
+    <select id="listWarehouseInOrderByConditionOnPage" resultType="com.chinaunicom.smartstorage.admin.dto.order.WarehouseInOrderQueryRespDTO">
+        select a.id,
+        b.name,
+        (select label from base_dict_data where type = 'GRAIN_VARIETY' and description = a.grain_variety) as grainVariety,
+        (select label from base_dict_data where type = 'GRAIN_SOURCE_TYPE' and description = CAST(a.grain_source_type AS VARCHAR)) as grainSourceType,
+        a.plan_weight as planWeight,
+        a.completed_weight as completedWeight,
+        a.state,
+        a.start_time as startTime,
+        a.end_time as endTime,
+        c.name as addUser,
+        a.add_time as addTime
+        from warehouse_in_order a
+        left join sts_customer b on a.customer_id =b.id
+        left join base_user_info c on c.id = a.add_user
+        <where>
+            <if test="name != null and name != ''">
+                and b.name like concat('%', #{name}, '%')
+            </if>
+            <if test="grainVariety != null and grainVariety != ''">
+                and a.grain_variety = #{grainVariety}
+            </if>
+        </where>
+        order by a.add_time desc
+    </select>
+    <select id="selectByTaskId" resultType="com.chinaunicom.smartstorage.admin.dto.order.WarehouseInOrderRespDTO">
+        select grain_variety as grainVariety from warehouse_in_order where id in (select order_id from task_flow where id = #{taskId})
+    </select>
+</mapper>
+

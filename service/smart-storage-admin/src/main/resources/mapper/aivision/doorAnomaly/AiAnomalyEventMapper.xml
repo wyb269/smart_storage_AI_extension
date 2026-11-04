@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  仓门异动事件 Mapper
+
+  依据 AI_HANDOFF.md：
+  - 第18.3节：默认按发生时间倒序
+  - 第18.4节：服务端分页，翻页保留筛选条件
+  - 第20.6节：人工处理使用乐观锁，版本不匹配时拒绝覆盖
+  - 第23节：不得用覆盖算法结果的方式完成事件处理
+  - 第28节：仓库数据范围必须实施在后端接口
+
+  ==================== 数据范围下推规则（唯一权威定义） ====================
+  本文件的仓库范围条件共出现 4 处（EventFilters、listDoorStatus、
+  listRecentEvent、getEventSummaryInScope），三处形态必须保持完全一致：
+
+    非全域 且有授权仓库  -> AND <别名>.warehouse_id IN (...)
+    非全域 且无授权仓库  -> AND 1 = 0        （失败即拒绝，返回空集）
+    全域               -> 不追加仓库条件
+
+  修改任一处时必须同步其余各处：把「取不到授权维度」当成「不限制」
+  等价于放弃越权防护，这正是原报告 ⑥-3 记录的缺口。
+  范围参数只能由 Service 从登录态构造，DTO 中的 scope 字段标 @JsonIgnore。
+  ========================================================================
+-->
+<mapper namespace="com.chinaunicom.smartstorage.admin.mapper.aivision.doorAnomaly.AiAnomalyEventMapper">
+
+    <!-- ========== 公共结果映射 ========== -->
+    <resultMap id="EventResultMap" type="com.chinaunicom.smartstorage.admin.dto.doorAnomaly.AnomalyEventRespDTO">
+        <id     property="eventId"          column="id"/>
+        <result property="eventNo"           column="event_no"/>
+        <result property="occurredAt"        column="occurred_at"/>
+        <result property="warehouseId"       column="warehouse_id"/>
+        <result property="warehouseName"     column="warehouse_name"/>
+        <result property="doorId"            column="door_id"/>
+        <result property="doorName"          column="door_name"/>
+        <result property="cameraId"          column="camera_id"/>
+        <result property="cameraCode"        column="camera_code"/>
+        <result property="anomalyType"       column="anomaly_type"/>
+        <result property="anomalyTypeName"   column="anomaly_type_name"/>
+        <result property="algorithmStatus"   column="algorithm_status"/>
+        <result property="algorithmResult"   column="algorithm_result"/>
+        <result property="confidence"        column="confidence"/>
+        <result property="processStatus"     column="process_status"/>
+        <result property="processedBy"       column="processed_by"/>
+        <result property="processedAt"       column="processed_at"/>
+        <result property="processOpinion"    column="process_opinion"/>
+        <result property="eventVersion"      column="event_version"/>
+    </resultMap>
+
+    <!-- 详情结果映射：在列表字段之上补算法与模拟数据字段 -->
+    <resultMap id="EventDetailResultMap"
+               type="com.chinaunicom.smartstorage.admin.dto.doorAnomaly.EventDetailRespDTO"
+               extends="EventResultMap">
+        <result property="eventDesc"            column="event_desc"/>
+        <result property="isSimulated"          column="is_simulated"/>
+        <result property="algorithmTaskNo"      column="algorithm_task_no"/>
+        <result property="modelName"            column="model_name"/>
+        <result property="modelVersion"         column="model_version"/>
+        <result property="algorithmVersion"     column="algorithm_version"/>
+        <result property="configVersion"        column="config_version"/>
+        <result property="inferenceStartedAt"   column="inference_started_at"/>
+        <result property="inferenceFinishedAt"  column="inference_finished_at"/>
+        <result property="inferenceDurationMs"  column="inference_duration_ms"/>
+    </resultMap>
+
+    <!--
+      ========== 时间列输出格式 ==========
+      PostgreSQL 的 TIMESTAMP 经 MyBatis 转成 String 会带 6 位小数
+      （实测 occurredAt = "2026-10-19 15:17:21.195589"），前端原样显示这串
+      既难看又与 Mock 输出不一致。统一在 SQL 侧格式化成
+      yyyy-MM-dd HH:mm:ss，让真实库与 Mock 的响应完全同形。
+      注意：排序仍用裸列，不用格式化后的字符串。
+    -->
+    <sql id="EventColumns">
+        e.id, e.event_no,
+        to_char(e.occurred_at, 'YYYY-MM-DD HH24:MI:SS') AS occurred_at,
+        e.warehouse_id, e.warehouse_name,
+        e.door_id, e.door_name, e.camera_id, e.camera_code,
+        e.anomaly_type, e.anomaly_type_name,
+        e.algorithm_status, e.algorithm_result, e.confidence,
+        e.process_status, e.processed_by,
+        to_char(e.processed_at, 'YYYY-MM-DD HH24:MI:SS') AS processed_at,
+        e.process_opinion, e.event_version
+    </sql>
+
+    <!--
+      ========== 详情专用列 ==========
+      第 17.2、17.3 节要求详情回答「算法为什么判为异常」，需要算法模型、
+      版本、推理起止与耗时，以及第 39.6 节强制的模拟数据标识。
+      这些列在 ai_anomaly_event 上不存在，必须 LEFT JOIN ai_algorithm_task。
+      用 LEFT JOIN 而非 INNER：算法任务缺失或尚未产出结论时事件本身仍应可见，
+      不得因为关联不到就把整条事件藏掉。
+    -->
+    <sql id="EventDetailColumns">
+        <include refid="EventColumns"/>,
+        e.event_desc, e.is_simulated,
+        t.task_no                   AS algorithm_task_no,
+        t.model_name                AS model_name,
+        t.model_version             AS model_version,
+        t.algorithm_version         AS algorithm_version,
+        t.config_version            AS config_version,
+        to_char(t.started_at,  'YYYY-MM-DD HH24:MI:SS') AS inference_started_at,
+        to_char(t.finished_at, 'YYYY-MM-DD HH24:MI:SS') AS inference_finished_at,
+        t.inference_duration_ms     AS inference_duration_ms
+    </sql>
+
+    <!-- ========== 公共筛选条件（第18.2节） ========== -->
+    <sql id="EventFilters">
+        <where>
+            <if test="query.eventNo != null and query.eventNo != ''">
+                AND e.event_no LIKE CONCAT('%', #{query.eventNo}, '%')
+            </if>
+            <!-- warehouseId / doorId 为 Long：BIGINT 列不接受 varchar 绑定，故只判空 -->
+            <if test="query.warehouseId != null">
+                AND e.warehouse_id = #{query.warehouseId}
+            </if>
+            <if test="query.doorId != null">
+                AND e.door_id = #{query.doorId}
+            </if>
+            <if test="query.cameraCode != null and query.cameraCode != ''">
+                AND e.camera_code LIKE CONCAT('%', #{query.cameraCode}, '%')
+            </if>
+            <if test="query.anomalyType != null and query.anomalyType != ''">
+                AND e.anomaly_type = #{query.anomalyType}
+            </if>
+            <if test="query.processStatus != null and query.processStatus != ''">
+                AND e.process_status = #{query.processStatus}
+            </if>
+            <!-- 行政区筛选：来自前端业务条件（TimeBaseQueryDTO），不是数据范围 -->
+            <if test="query.regionId != null and query.regionId != ''">
+                AND e.region_id = #{query.regionId}
+            </if>
+            <!--
+              P0-6：Service 从登录态注入的仓库数据范围（第28节）。
+              与业务筛选条件以 AND 叠加，且**不接受前端传入**
+              （scopeUnrestricted / scopeWarehouseIds 标记了 @JsonIgnore）。
+            -->
+            <if test="!query.scopeUnrestricted">
+                <choose>
+                    <when test="query.scopeWarehouseIds != null and query.scopeWarehouseIds.size() > 0">
+                        AND e.warehouse_id IN
+                        <foreach collection="query.scopeWarehouseIds" item="wid"
+                                 open="(" close=")" separator=",">
+                            #{wid}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        AND 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+            <if test="query.startTime != null">
+                AND e.occurred_at &gt;= #{query.startTime}
+            </if>
+            <if test="query.endTime != null">
+                AND e.occurred_at &lt;= #{query.endTime}
+            </if>
+        </where>
+    </sql>
+
+    <!-- ========== 仓门状态列表（第16.3节） ========== -->
+    <select id="listDoorStatus"
+            resultType="com.chinaunicom.smartstorage.admin.dto.doorAnomaly.DoorStatusRespDTO">
+        SELECT d.id            AS doorId,
+               d.door_name     AS doorName,
+               d.warehouse_id  AS warehouseId,
+               d.warehouse_name AS warehouseName,
+               d.camera_id     AS cameraId,
+               d.camera_code   AS cameraCode,
+               d.device_status AS deviceStatus,
+               d.door_physical_status AS doorPhysicalStatus,
+               d.alarm_status  AS alarmStatus,
+               to_char(d.last_heartbeat_at, 'YYYY-MM-DD HH24:MI:SS') AS lastHeartbeatAt,
+               to_char(d.latest_event_at,   'YYYY-MM-DD HH24:MI:SS') AS latestEventAt,
+               d.sort_no       AS sortNo
+        FROM ai_door_config d
+        <where>
+            <if test="!unrestricted">
+                <choose>
+                    <when test="warehouseIds != null and warehouseIds.size() > 0">
+                        AND d.warehouse_id IN
+                        <foreach collection="warehouseIds" item="wid"
+                                 open="(" close=")" separator=",">
+                            #{wid}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        AND 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+            AND d.enabled = TRUE
+        </where>
+        ORDER BY d.sort_no ASC
+    </select>
+
+    <!-- ========== 首页最近事件（第16.5节） ========== -->
+    <select id="listRecentEvent" resultMap="EventResultMap">
+        SELECT <include refid="EventColumns"/>
+        FROM ai_anomaly_event e
+        <where>
+            <if test="!unrestricted">
+                <choose>
+                    <when test="warehouseIds != null and warehouseIds.size() > 0">
+                        AND e.warehouse_id IN
+                        <foreach collection="warehouseIds" item="wid"
+                                 open="(" close=")" separator=",">
+                            #{wid}
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        AND 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        ORDER BY e.occurred_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- ========== 历史分页查询（第18.4节） ========== -->
+    <select id="listEventByCondition" resultMap="EventResultMap">
+        SELECT <include refid="EventColumns"/>
+        FROM ai_anomaly_event e
+        <include refid="EventFilters"/>
+        <choose>
+            <when test="query.orderByOccurredDesc != null and !query.orderByOccurredDesc">
+                ORDER BY e.occurred_at ASC
+            </when>
+            <otherwise>
+                ORDER BY e.occurred_at DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!--
+      ========== 导出查询（不分页，受 limit 约束） ==========
+      第18.5节：单次导出不超过约5000条。
+      第28节：导出同样受仓库数据范围约束，防止越权批量导出。
+    -->
+    <select id="listEventForExport" resultMap="EventResultMap">
+        SELECT <include refid="EventColumns"/>
+        FROM ai_anomaly_event e
+        <include refid="EventFilters"/>
+        ORDER BY e.occurred_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <!--
+      ========== 事件详情主记录（带数据范围，P0-6 越权校验） ==========
+      仓库约束必须写在 SQL 里：EventColumns 不含 org_id / region_id，
+      取回整行后在 Java 判断会因字段缺失而无法比较。
+      本查询同时供「详情读取」与「处理前校验/取 event_no」使用，
+      因此不存在不带范围的第二个版本。
+    -->
+    <select id="getEventSummaryInScope" resultMap="EventResultMap">
+        SELECT <include refid="EventColumns"/>
+        FROM ai_anomaly_event e
+        WHERE e.id = #{eventId}
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND e.warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <!--
+      ========== 事件详情（带数据范围 + 算法任务关联） ==========
+      第 17.1~17.3 节：详情必须回答「算法为什么判为异常、有什么证据」。
+      此前详情复用 EventColumns，导致 eventDesc / isSimulated / 算法模型与
+      版本 / 推理起止与耗时在真实库路径上恒为 null（Mock 实现填了这些字段，
+      所以联调期一直看不出来）。
+    -->
+    <select id="getEventDetailInScope" resultMap="EventDetailResultMap">
+        SELECT <include refid="EventDetailColumns"/>
+        FROM ai_anomaly_event e
+        LEFT JOIN ai_algorithm_task t ON t.id = e.algorithm_task_id
+        WHERE e.id = #{eventId}
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND e.warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <!--
+      ========== 人工处理：乐观锁更新（第20.6节） ==========
+
+      关键点：
+      1. WHERE 条件含 event_version，版本不匹配则更新 0 行；
+      2. 只更新人工处理相关字段，**不触碰 algorithm_status 与 algorithm_result**
+         （第23节禁止用覆盖算法结果的方式完成事件处理）；
+      3. event_version 自增，供下次提交使用；
+      4. process_status NOT IN 终态，保证已核实事件不被重复处理。
+    -->
+    <update id="updateProcessWithVersion">
+        UPDATE ai_anomaly_event
+        SET process_status   = #{processStatus},
+            processed_by     = #{processedBy},
+            <!-- 参数名必须与 Mapper 接口声明一致。这里曾写成 #{processedAt}，
+                 而接口只有 updatedAt，MyBatis 运行期抛
+                 「Parameter 'processedAt' not found」，导致人工处理写路径
+                 从来没有成功过一次。处理时间与更新时间取同一个时间戳。 -->
+            processed_at     = #{updatedAt},
+            process_opinion  = #{processOpinion},
+            event_version    = event_version + 1,
+            updated_by       = #{processedBy},
+            updated_at       = #{updatedAt}
+        WHERE id = #{eventId}
+          AND event_version = #{eventVersion}
+          AND process_status NOT IN ('VERIFIED_TRUE', 'VERIFIED_FALSE', 'CLOSED')
+    </update>
+
+    <!--
+      ========== 「重新识别」成功后回写算法维度（契约 §1） ==========
+      只动算法相关列：
+      - process_status / event_version 保持原值（重跑不是人工核实，第 23 节）；
+      - anomaly_type 为空时保留原值（NOT NULL，不能被空结论抹掉）；
+      - algorithm_result 由调用方仅在成功时传入，不在 SQL 里伪造 NORMAL。
+      仓库数据范围与其余读路径同语义（P0-6）。
+    -->
+    <update id="updateAlgorithmFields">
+        UPDATE ai_anomaly_event
+        SET algorithm_task_id = #{algorithmTaskId},
+            algorithm_status  = #{algorithmStatus},
+            algorithm_result  = #{algorithmResult},
+            confidence        = #{confidence},
+            anomaly_type      = COALESCE(#{anomalyType}, anomaly_type),
+            updated_by        = #{updatedBy},
+            updated_at        = #{updatedAt}
+        WHERE id = #{eventId}
+        <if test="!unrestricted">
+            <choose>
+                <when test="warehouseIds != null and warehouseIds.size() > 0">
+                    AND warehouse_id IN
+                    <foreach collection="warehouseIds" item="wid"
+                             open="(" close=")" separator=",">
+                        #{wid}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND 1 = 0
+                </otherwise>
+            </choose>
+        </if>
+    </update>
+
+</mapper>

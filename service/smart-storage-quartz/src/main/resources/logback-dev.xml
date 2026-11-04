@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds">
+    <!-- name的值是变量的名称，value的值时变量定义的值。通过定义的值会被插入到logger上下文中。定义变量后，可以使“${}”来使用变量。 -->
+    <property name="logName" value="smart-storage-quartz"/>
+    <property name="logPath" value="./logs"/>
+    <property name="logMaxHistory" value="180"/>
+    <property name="logMaxFileSize" value="100MB"/>
+    <!--    控制台-->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>DEBUG</level>
+        </filter>
+        <encoder>
+            <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}]: [%-5p][%t] [requestId:%X{requestId:-none}] %c:%line - %msg%n</Pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="CONSOLE-ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <!--内部实现是一个有界ArrayBlockingQueue,queueSize是队列大小。该值会影响性能.默认值为256-->
+        <queueSize>4096</queueSize>
+        <!--当队列的剩余容量小于这个阈值并且当前日志level TRACE, DEBUG or INFO，则丢弃这些日志。默认为queueSize大小的20%。-->
+        <discardingThreshold>0</discardingThreshold>
+        <!--neverBlock=true则写日志队列时候会调用阻塞队列的offer方法而不是put，如果队列满则直接返回，而不是阻塞，即日志被丢弃。-->
+        <neverBlock>false</neverBlock>
+        <!--实际负责写日志的appender,最多只能添加一个-->
+        <appender-ref ref="CONSOLE"/>
+    </appender>
+    <!--调试日志-->
+    <appender name="DEBUG-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${logPath}/${logName}/debug/${logName}-debug.log</file>
+        <encoder>
+            <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}]: [%-5p][%t] [requestId:%X{requestId:-none}] %c:%line - %msg%n</Pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${logPath}/${logName}/debug/${logName}-debug-%d{yyyyMMdd}-%i.log.gz</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>${logMaxFileSize}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>${logMaxHistory}</maxHistory>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>DEBUG</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+    <appender name="DEBUG-ASYNC-FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <!--内部实现是一个有界ArrayBlockingQueue,queueSize是队列大小。该值会影响性能.默认值为256-->
+        <queueSize>4096</queueSize>
+        <!--当队列的剩余容量小于这个阈值并且当前日志level TRACE, DEBUG or INFO，则丢弃这些日志。默认为queueSize大小的20%。-->
+        <discardingThreshold>0</discardingThreshold>
+        <!--neverBlock=true则写日志队列时候会调用阻塞队列的offer方法而不是put，如果队列满则直接返回，而不是阻塞，即日志被丢弃。-->
+        <neverBlock>false</neverBlock>
+        <!--实际负责写日志的appender,最多只能添加一个-->
+        <appender-ref ref="DEBUG-FILE"/>
+    </appender>
+    <!--正常日志-->
+    <appender name="INFO-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${logPath}/${logName}/info/${logName}-info.log</file>
+        <encoder>
+            <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}]: [%-5p][%t] [requestId:%X{requestId:-none}] %c:%line - %msg%n</Pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${logPath}/${logName}/info/${logName}-info-%d{yyyyMMdd}-%i.log.gz</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>${logMaxFileSize}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>${logMaxHistory}</maxHistory>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+    <appender name="INFO-ASYNC-FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <!--内部实现是一个有界ArrayBlockingQueue,queueSize是队列大小。该值会影响性能.默认值为256-->
+        <queueSize>4096</queueSize>
+        <!--当队列的剩余容量小于这个阈值并且当前日志level TRACE, DEBUG or INFO，则丢弃这些日志。默认为queueSize大小的20%。-->
+        <discardingThreshold>0</discardingThreshold>
+        <!--neverBlock=true则写日志队列时候会调用阻塞队列的offer方法而不是put，如果队列满则直接返回，而不是阻塞，即日志被丢弃。-->
+        <neverBlock>false</neverBlock>
+        <!--实际负责写日志的appender,最多只能添加一个-->
+        <appender-ref ref="INFO-FILE"/>
+    </appender>
+    <!--警告日志-->
+    <appender name="WARN-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${logPath}/${logName}/warn/${logName}-warn.log</file>
+        <encoder>
+            <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}]: [%-5p][%t] [requestId:%X{requestId:-none}] %c:%line - %msg%n</Pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${logPath}/${logName}/warn/${logName}-warn-%d{yyyyMMdd}-%i.log.gz</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>${logMaxFileSize}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>${logMaxHistory}</maxHistory>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>WARN</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+    <appender name="WARN-ASYNC-FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <!--内部实现是一个有界ArrayBlockingQueue,queueSize是队列大小。该值会影响性能.默认值为256-->
+        <queueSize>4096</queueSize>
+        <!--当队列的剩余容量小于这个阈值并且当前日志level TRACE, DEBUG or INFO，则丢弃这些日志。默认为queueSize大小的20%。-->
+        <discardingThreshold>0</discardingThreshold>
+        <!--neverBlock=true则写日志队列时候会调用阻塞队列的offer方法而不是put，如果队列满则直接返回，而不是阻塞，即日志被丢弃。-->
+        <neverBlock>false</neverBlock>
+        <!--实际负责写日志的appender,最多只能添加一个-->
+        <appender-ref ref="WARN-FILE"/>
+    </appender>
+    <!--错误日志-->
+    <appender name="ERROR-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${logPath}/${logName}/error/${logName}-error.log</file>
+        <encoder>
+            <Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}]: [%-5p][%t] [requestId:%X{requestId:-none}] %c:%line - %msg%n</Pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${logPath}/${logName}/error/${logName}-error-%d{yyyyMMdd}-%i.log.gz</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>${logMaxFileSize}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>${logMaxHistory}</maxHistory>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+    <appender name="ERROR-ASYNC-FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <!--内部实现是一个有界ArrayBlockingQueue,queueSize是队列大小。该值会影响性能.默认值为256-->
+        <queueSize>4096</queueSize>
+        <!--当队列的剩余容量小于这个阈值并且当前日志level TRACE, DEBUG or INFO，则丢弃这些日志。默认为queueSize大小的20%。-->
+        <discardingThreshold>0</discardingThreshold>
+        <!--neverBlock=true则写日志队列时候会调用阻塞队列的offer方法而不是put，如果队列满则直接返回，而不是阻塞，即日志被丢弃。-->
+        <neverBlock>false</neverBlock>
+        <!--实际负责写日志的appender,最多只能添加一个-->
+        <appender-ref ref="ERROR-FILE"/>
+    </appender>
+    <logger name="org.springframework" level="INFO" additivity="true"/>
+    <logger name="org.mybatis" level="INFO" additivity="true"/>
+    <logger name="net.sf.ehcache" level="INFO" additivity="true"/>
+    <logger name="org.hibernate" level="INFO" additivity="true"/>
+    <logger name="org.apache.shiro" level="INFO" additivity="true"/>
+    <logger name="io.netty" level="INFO" additivity="true"/>
+    <logger name="org.apache.ibatis" level="INFO" additivity="true"/>
+    <logger name="io.lettuce" level="INFO" additivity="true"/>
+    <logger name="ma.glasnost.orika" level="INFO" additivity="true"/>
+    <logger name="org.redisson" level="INFO" additivity="true"/>
+    <logger name="org.quartz" level="INFO" additivity="true"/>
+    <logger name="org.crazycake.shiro" level="INFO" additivity="true"/>
+    <logger name="springfox.documentation" level="INFO" additivity="true"/>
+    <logger name="druid.sql" level="INFO" additivity="true"/>
+    <logger name="com.alibaba.druid" level="INFO" additivity="true"/>
+    <logger name="com.github.pagehelper" level="INFO" additivity="true"/>
+    <logger name="springfox.bean.validators" level="INFO" additivity="true"/>
+    <!--    <root level="INFO">-->
+    <!--        <appender-ref ref="CONSOLE-ASYNC"/>-->
+    <!--        <appender-ref ref="DEBUG-ASYNC"/>-->
+    <!--        <appender-ref ref="INFO-ASYNC"/>-->
+    <!--        <appender-ref ref="ERROR-ASYNC"/>-->
+    <!--    </root>-->
+    <root level="DEBUG">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="DEBUG-FILE"/>
+        <appender-ref ref="INFO-FILE"/>
+        <appender-ref ref="WARN-FILE"/>
+        <appender-ref ref="ERROR-FILE"/>
+    </root>
+</configuration>
